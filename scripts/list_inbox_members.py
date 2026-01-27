@@ -26,7 +26,7 @@ def main() -> int:
         )
         return 2
 
-    url = f"{base.rstrip('/')}/api/v1/accounts/{account}/inboxes/{inbox_id}"
+    url = f"{base.rstrip('/')}/api/v1/accounts/{account}/inbox_members/{inbox_id}"
     logger.info(f"GET {url}")
 
     try:
@@ -38,11 +38,8 @@ def main() -> int:
 
     data: Dict[str, Any] = resp.json() if resp.headers.get("Content-Type", "").startswith("application/json") else {}
     members: List[Dict[str, Any]] = []
-
-    if isinstance(data.get("members"), list):
-        members = data.get("members")
-    elif isinstance(data.get("payload"), dict) and isinstance(data["payload"].get("members"), list):
-        members = data["payload"]["members"]
+    if isinstance(data.get("payload"), list):
+        members = data["payload"]
 
     logger.info(f"Members in inbox {inbox_id}: {len(members)}")
     for member in members:

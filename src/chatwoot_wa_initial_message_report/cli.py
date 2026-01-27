@@ -31,6 +31,15 @@ def _get_args() -> argparse.Namespace:
     parser.add_argument("--days", type=int, default=get_env("CHATWOOT_DAYS"))
     parser.add_argument("--since", type=_parse_since, default=None)
     parser.add_argument("--data-dir", default="data")
+    parser.add_argument("--per-page", type=int, default=None)
+    parser.add_argument("--agent-id", type=int, default=None)
+    parser.add_argument("--status", default="all")
+    parser.add_argument(
+        "--fallback-statuses",
+        default=None,
+        help="Comma-separated statuses to try if status=all returns zero (e.g. open,resolved,pending,snoozed)",
+    )
+    parser.add_argument("--use-fallback-statuses", action="store_true")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     return parser
 
@@ -72,7 +81,30 @@ def main() -> None:
         logger=logger if args.debug else None,
     )
 
-    records, stats = extract_initial_messages(client, str(args.inbox_id), since=since, logger=logger)
+    try:
+        members_payload = client.list_inbox_members(str(args.inbox_id))
+        members = members_payload.get("payload", [])
+        if isinstance(members, list) and len(members) == 0:
+            logger.warning(
+                "Inbox has 0 members; conversations may be hidden unless the token user is assigned"
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Could not check inbox members: {exc}")
+
+    fallback_statuses = None
+    if args.use_fallback_statuses and args.fallback_statuses:
+        fallback_statuses = [s.strip() for s in args.fallback_statuses.split(",") if s.strip()]
+
+    records, stats = extract_initial_messages(
+        client,
+        str(args.inbox_id),
+        since=since,
+        status=args.status,
+        fallback_statuses=fallback_statuses,
+        per_page=args.per_page,
+        agent_id=args.agent_id,
+        logger=logger,
+    )
     raw_df, literal_df, category_df = build_reports(records)
     write_reports(args.data_dir, raw_df, literal_df, category_df)
 

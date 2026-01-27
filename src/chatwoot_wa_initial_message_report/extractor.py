@@ -41,6 +41,8 @@ def _get_payload_list(payload: Dict) -> List[Dict]:
         return payload["payload"]
     if isinstance(payload.get("data"), list):
         return payload["data"]
+    if isinstance(payload.get("data"), dict) and isinstance(payload["data"].get("payload"), list):
+        return payload["data"]["payload"]
     return []
 
 
@@ -48,11 +50,20 @@ def list_conversations(
     client: ChatwootClient,
     inbox_id: str,
     since: Optional[datetime] = None,
+    status: str = "all",
+    per_page: Optional[int] = None,
+    agent_id: Optional[int] = None,
     logger: Optional[Logger] = None,
 ) -> Iterable[Dict]:
     page = 1
     while True:
-        data = client.list_conversations(inbox_id, page)
+        data = client.list_conversations(
+            inbox_id,
+            page,
+            status=status,
+            per_page=per_page,
+            agent_id=agent_id,
+        )
         items = _get_payload_list(data)
         if logger:
             logger.debug(f"Page {page} items: {len(items)}")
@@ -99,6 +110,10 @@ def extract_initial_messages(
     client: ChatwootClient,
     inbox_id: str,
     since: Optional[datetime] = None,
+    status: str = "all",
+    fallback_statuses: Optional[List[str]] = None,
+    per_page: Optional[int] = None,
+    agent_id: Optional[int] = None,
     logger: Optional[Logger] = None,
 ) -> Tuple[List[InitialMessage], Dict[str, int]]:
     results: List[InitialMessage] = []
@@ -110,36 +125,59 @@ def extract_initial_messages(
 
     logger = logger or get_logger("extractor")
     logger.info("Listando conversaciones...")
-    for convo in list_conversations(client, inbox_id, since=since, logger=logger):
-        stats["total_listed"] += 1
-        convo_id = convo.get("id")
-        if convo_id is None:
-            stats["total_excluded"] += 1
-            continue
-        detail = client.get_conversation(str(convo_id))
-        extraction = _extract_initial_message(detail)
-        if extraction is None:
-            stats["total_excluded"] += 1
-            continue
-        msg, convo_detail = extraction
-        convo_created_at = _to_iso(_parse_epoch(convo_detail.get("created_at")))
-        msg_created_at = _to_iso(_parse_epoch(msg.get("created_at")))
-        raw_text = msg.get("content", "")
-        literal = normalize_literal(raw_text)
-        category = categorize(raw_text)
-        results.append(
-            InitialMessage(
-                conversation_id=int(convo_id),
-                inbox_id=int(convo_detail.get("inbox_id") or inbox_id),
-                conversation_created_at=convo_created_at or "",
-                message_id=int(msg.get("id")),
-                message_created_at=msg_created_at or "",
-                initial_message_raw=raw_text,
-                initial_message_literal=literal,
-                category=category,
-            )
+
+    def _iter_convos(active_status: str) -> Iterable[Dict]:
+        return list_conversations(
+            client,
+            inbox_id,
+            since=since,
+            status=active_status,
+            per_page=per_page,
+            agent_id=agent_id,
+            logger=logger,
         )
-        stats["total_processed"] += 1
+
+    seen_ids = set()
+    active_statuses = [status]
+    if status == "all" and fallback_statuses:
+        active_statuses = [status] + fallback_statuses
+
+    for active_status in active_statuses:
+        if logger and active_status != status:
+            logger.warning(f"Fallback status: {active_status}")
+        for convo in _iter_convos(active_status):
+            convo_id = convo.get("id")
+            if convo_id in seen_ids:
+                continue
+            seen_ids.add(convo_id)
+            stats["total_listed"] += 1
+            if convo_id is None:
+                stats["total_excluded"] += 1
+                continue
+            detail = client.get_conversation(str(convo_id))
+            extraction = _extract_initial_message(detail)
+            if extraction is None:
+                stats["total_excluded"] += 1
+                continue
+            msg, convo_detail = extraction
+            convo_created_at = _to_iso(_parse_epoch(convo_detail.get("created_at")))
+            msg_created_at = _to_iso(_parse_epoch(msg.get("created_at")))
+            raw_text = msg.get("content", "")
+            literal = normalize_literal(raw_text)
+            category = categorize(raw_text)
+            results.append(
+                InitialMessage(
+                    conversation_id=int(convo_id),
+                    inbox_id=int(convo_detail.get("inbox_id") or inbox_id),
+                    conversation_created_at=convo_created_at or "",
+                    message_id=int(msg.get("id")),
+                    message_created_at=msg_created_at or "",
+                    initial_message_raw=raw_text,
+                    initial_message_literal=literal,
+                    category=category,
+                )
+            )
+            stats["total_processed"] += 1
 
     logger.info(
         f"Listadas: {stats['total_listed']}, procesadas: {stats['total_processed']}, excluidas: {stats['total_excluded']}"

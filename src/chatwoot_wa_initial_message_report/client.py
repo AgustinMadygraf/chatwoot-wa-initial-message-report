@@ -62,15 +62,35 @@ class ChatwootClient:
 
         raise RuntimeError("Request failed after retries")
 
-    def list_conversations(self, inbox_id: str, page: int) -> Dict[str, Any]:
+    def list_conversations(
+        self,
+        inbox_id: str,
+        page: int,
+        status: str = "all",
+        per_page: Optional[int] = None,
+        agent_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        params: Dict[str, Any] = {"status": status, "page": page}
+        if inbox_id:
+            params["inbox_id"] = inbox_id
+        if per_page:
+            params["per_page"] = per_page
+        if agent_id:
+            params["agent_id"] = agent_id
         return self._request(
             "GET",
             f"/api/v1/accounts/{self.account_id}/conversations",
-            params={"status": "all", "inbox_id": inbox_id, "page": page},
+            params=params,
         )
 
     def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
         return self._request(
             "GET",
             f"/api/v1/accounts/{self.account_id}/conversations/{conversation_id}",
+        )
+
+    def list_inbox_members(self, inbox_id: str) -> Dict[str, Any]:
+        return self._request(
+            "GET",
+            f"/api/v1/accounts/{self.account_id}/inbox_members/{inbox_id}",
         )
