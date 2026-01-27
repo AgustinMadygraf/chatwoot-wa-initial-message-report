@@ -1,0 +1,144 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Dict, Iterable, List, Optional, Tuple
+
+from .client import ChatwootClient
+from .transform import categorize, normalize_literal
+from shared.logger import Logger, get_logger
+
+
+@dataclass
+class InitialMessage:
+    conversation_id: int
+    inbox_id: int
+    conversation_created_at: str
+    message_id: int
+    message_created_at: str
+    initial_message_raw: str
+    initial_message_literal: str
+    category: str
+
+
+def _parse_epoch(epoch: Optional[int]) -> Optional[datetime]:
+    if epoch is None:
+        return None
+    try:
+        return datetime.fromtimestamp(epoch, tz=timezone.utc)
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_iso(dt: Optional[datetime]) -> Optional[str]:
+    if dt is None:
+        return None
+    return dt.isoformat()
+
+
+def _get_payload_list(payload: Dict) -> List[Dict]:
+    if isinstance(payload.get("payload"), list):
+        return payload["payload"]
+    if isinstance(payload.get("data"), list):
+        return payload["data"]
+    return []
+
+
+def list_conversations(
+    client: ChatwootClient,
+    inbox_id: str,
+    since: Optional[datetime] = None,
+) -> Iterable[Dict]:
+    page = 1
+    while True:
+        data = client.list_conversations(inbox_id, page)
+        items = _get_payload_list(data)
+        if not items:
+            break
+        for item in items:
+            if since is not None:
+                created_at = _parse_epoch(item.get("created_at"))
+                if created_at is None or created_at < since:
+                    continue
+            yield item
+        page += 1
+
+
+def _extract_initial_message(conversation: Dict) -> Optional[Tuple[Dict, Dict]]:
+    messages = conversation.get("messages")
+    if not isinstance(messages, list):
+        messages = conversation.get("payload", {}).get("messages")
+    if not isinstance(messages, list):
+        return None
+
+    candidates = []
+    for msg in messages:
+        if msg.get("private") is True:
+            continue
+        if msg.get("sender_type") != "contact":
+            continue
+        if msg.get("content_type") != "text":
+            continue
+        content = msg.get("content")
+        if not isinstance(content, str) or not content.strip():
+            continue
+        created_at = _parse_epoch(msg.get("created_at"))
+        candidates.append((created_at, msg))
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda x: (x[0] is None, x[0]))
+    return candidates[0][1], conversation
+
+
+def extract_initial_messages(
+    client: ChatwootClient,
+    inbox_id: str,
+    since: Optional[datetime] = None,
+    logger: Optional[Logger] = None,
+) -> Tuple[List[InitialMessage], Dict[str, int]]:
+    results: List[InitialMessage] = []
+    stats = {
+        "total_listed": 0,
+        "total_processed": 0,
+        "total_excluded": 0,
+    }
+
+    logger = logger or get_logger("extractor")
+    logger.info("Listando conversaciones...")
+    for convo in list_conversations(client, inbox_id, since=since):
+        stats["total_listed"] += 1
+        convo_id = convo.get("id")
+        if convo_id is None:
+            stats["total_excluded"] += 1
+            continue
+        detail = client.get_conversation(str(convo_id))
+        extraction = _extract_initial_message(detail)
+        if extraction is None:
+            stats["total_excluded"] += 1
+            continue
+        msg, convo_detail = extraction
+        convo_created_at = _to_iso(_parse_epoch(convo_detail.get("created_at")))
+        msg_created_at = _to_iso(_parse_epoch(msg.get("created_at")))
+        raw_text = msg.get("content", "")
+        literal = normalize_literal(raw_text)
+        category = categorize(raw_text)
+        results.append(
+            InitialMessage(
+                conversation_id=int(convo_id),
+                inbox_id=int(convo_detail.get("inbox_id") or inbox_id),
+                conversation_created_at=convo_created_at or "",
+                message_id=int(msg.get("id")),
+                message_created_at=msg_created_at or "",
+                initial_message_raw=raw_text,
+                initial_message_literal=literal,
+                category=category,
+            )
+        )
+        stats["total_processed"] += 1
+
+    logger.info(
+        f"Listadas: {stats['total_listed']}, procesadas: {stats['total_processed']}, excluidas: {stats['total_excluded']}"
+    )
+    return results, stats

@@ -1,0 +1,68 @@
+import time
+from typing import Any, Dict, Optional
+
+import requests
+
+
+class ChatwootClient:
+    def __init__(
+        self,
+        base_url: str,
+        account_id: str,
+        api_token: str,
+        timeout: int = 30,
+        min_sleep: float = 0.15,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.account_id = account_id
+        self.timeout = timeout
+        self.min_sleep = min_sleep
+        self.session = requests.Session()
+        self.session.headers.update({"api_access_token": api_token})
+
+    def _request(self, method: str, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        url = f"{self.base_url}{path}"
+        backoff = 1.0
+        for attempt in range(5):
+            if self.min_sleep:
+                time.sleep(self.min_sleep)
+            try:
+                resp = self.session.request(method, url, params=params, timeout=self.timeout)
+            except requests.RequestException:
+                if attempt == 4:
+                    raise
+                time.sleep(backoff)
+                backoff *= 2
+                continue
+
+            if resp.status_code == 429 or 500 <= resp.status_code < 600:
+                if attempt == 4:
+                    resp.raise_for_status()
+                retry_after = resp.headers.get("Retry-After")
+                if retry_after:
+                    try:
+                        time.sleep(float(retry_after))
+                    except ValueError:
+                        time.sleep(backoff)
+                else:
+                    time.sleep(backoff)
+                backoff *= 2
+                continue
+
+            resp.raise_for_status()
+            return resp.json()
+
+        raise RuntimeError("Request failed after retries")
+
+    def list_conversations(self, inbox_id: str, page: int) -> Dict[str, Any]:
+        return self._request(
+            "GET",
+            f"/api/v1/accounts/{self.account_id}/conversations",
+            params={"status": "all", "inbox_id": inbox_id, "page": page},
+        )
+
+    def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
+        return self._request(
+            "GET",
+            f"/api/v1/accounts/{self.account_id}/conversations/{conversation_id}",
+        )
