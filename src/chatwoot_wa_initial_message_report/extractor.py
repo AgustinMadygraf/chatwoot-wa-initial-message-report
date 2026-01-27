@@ -45,6 +45,24 @@ def _get_payload_list(payload: Dict) -> List[Dict]:
         return payload["data"]["payload"]
     return []
 
+def _get_conversation_payload(conversation: Dict) -> Dict:
+    if isinstance(conversation.get("payload"), dict):
+        return conversation["payload"]
+    if isinstance(conversation.get("data"), dict) and isinstance(conversation["data"].get("payload"), dict):
+        return conversation["data"]["payload"]
+    if isinstance(conversation.get("data"), dict):
+        return conversation["data"]
+    return conversation
+
+
+def _get_messages(conversation: Dict) -> Optional[List[Dict]]:
+    payload = _get_conversation_payload(conversation)
+    if isinstance(payload.get("messages"), list):
+        return payload["messages"]
+    if isinstance(conversation.get("messages"), list):
+        return conversation["messages"]
+    return None
+
 
 def list_conversations(
     client: ChatwootClient,
@@ -79,9 +97,7 @@ def list_conversations(
 
 
 def _extract_initial_message(conversation: Dict) -> Optional[Tuple[Dict, Dict]]:
-    messages = conversation.get("messages")
-    if not isinstance(messages, list):
-        messages = conversation.get("payload", {}).get("messages")
+    messages = _get_messages(conversation)
     if not isinstance(messages, list):
         return None
 
@@ -89,7 +105,8 @@ def _extract_initial_message(conversation: Dict) -> Optional[Tuple[Dict, Dict]]:
     for msg in messages:
         if msg.get("private") is True:
             continue
-        if msg.get("sender_type") != "contact":
+        sender_type = str(msg.get("sender_type", "")).lower()
+        if sender_type != "contact":
             continue
         if msg.get("content_type") != "text":
             continue
@@ -160,7 +177,8 @@ def extract_initial_messages(
                 stats["total_excluded"] += 1
                 continue
             msg, convo_detail = extraction
-            convo_created_at = _to_iso(_parse_epoch(convo_detail.get("created_at")))
+            convo_payload = _get_conversation_payload(convo_detail)
+            convo_created_at = _to_iso(_parse_epoch(convo_payload.get("created_at")))
             msg_created_at = _to_iso(_parse_epoch(msg.get("created_at")))
             raw_text = msg.get("content", "")
             literal = normalize_literal(raw_text)
@@ -168,7 +186,7 @@ def extract_initial_messages(
             results.append(
                 InitialMessage(
                     conversation_id=int(convo_id),
-                    inbox_id=int(convo_detail.get("inbox_id") or inbox_id),
+                    inbox_id=int(convo_payload.get("inbox_id") or inbox_id),
                     conversation_created_at=convo_created_at or "",
                     message_id=int(msg.get("id")),
                     message_created_at=msg_created_at or "",
