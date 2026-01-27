@@ -48,11 +48,14 @@ def list_conversations(
     client: ChatwootClient,
     inbox_id: str,
     since: Optional[datetime] = None,
+    logger: Optional[Logger] = None,
 ) -> Iterable[Dict]:
     page = 1
     while True:
         data = client.list_conversations(inbox_id, page)
         items = _get_payload_list(data)
+        if logger:
+            logger.debug(f"Page {page} items: {len(items)}")
         if not items:
             break
         for item in items:
@@ -107,7 +110,7 @@ def extract_initial_messages(
 
     logger = logger or get_logger("extractor")
     logger.info("Listando conversaciones...")
-    for convo in list_conversations(client, inbox_id, since=since):
+    for convo in list_conversations(client, inbox_id, since=since, logger=logger):
         stats["total_listed"] += 1
         convo_id = convo.get("id")
         if convo_id is None:

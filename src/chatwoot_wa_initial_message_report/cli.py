@@ -31,6 +31,7 @@ def _get_args() -> argparse.Namespace:
     parser.add_argument("--days", type=int, default=get_env("CHATWOOT_DAYS"))
     parser.add_argument("--since", type=_parse_since, default=None)
     parser.add_argument("--data-dir", default="data")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     return parser
 
 
@@ -62,12 +63,13 @@ def main() -> None:
     parser = _get_args()
     args = _validate_args(parser.parse_args(), parser)
     since = _compute_since(args)
-    logger = get_logger("cli")
+    logger = get_logger("cli", level="DEBUG" if args.debug else "INFO")
 
     client = ChatwootClient(
         base_url=args.base_url,
         account_id=str(args.account_id),
         api_token=args.api_token,
+        logger=logger if args.debug else None,
     )
 
     records, stats = extract_initial_messages(client, str(args.inbox_id), since=since, logger=logger)

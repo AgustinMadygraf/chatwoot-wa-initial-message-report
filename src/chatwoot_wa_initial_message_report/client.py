@@ -3,6 +3,8 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from shared.logger import Logger
+
 
 class ChatwootClient:
     def __init__(
@@ -12,11 +14,13 @@ class ChatwootClient:
         api_token: str,
         timeout: int = 30,
         min_sleep: float = 0.15,
+        logger: Optional[Logger] = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.account_id = account_id
         self.timeout = timeout
         self.min_sleep = min_sleep
+        self.logger = logger
         self.session = requests.Session()
         self.session.headers.update({"api_access_token": api_token})
 
@@ -27,6 +31,8 @@ class ChatwootClient:
             if self.min_sleep:
                 time.sleep(self.min_sleep)
             try:
+                if self.logger:
+                    self.logger.debug(f"{method} {url} params={params}")
                 resp = self.session.request(method, url, params=params, timeout=self.timeout)
             except requests.RequestException:
                 if attempt == 4:
@@ -38,6 +44,8 @@ class ChatwootClient:
             if resp.status_code == 429 or 500 <= resp.status_code < 600:
                 if attempt == 4:
                     resp.raise_for_status()
+                if self.logger:
+                    self.logger.warning(f"Retryable status {resp.status_code} for {url}")
                 retry_after = resp.headers.get("Retry-After")
                 if retry_after:
                     try:
