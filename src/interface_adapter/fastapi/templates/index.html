@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+  <body class="bg-light">
+    <main class="container py-5">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h1 class="h4 mb-3">{{ title }}</h1>
+              <p class="mb-1">Enlace publicado:</p>
+              <p class="mb-3">
+                <a href="{{ public_link }}" target="_blank" rel="noreferrer">{{ public_link }}</a>
+              </p>
+              <button id="checkBtn" class="btn btn-primary">Verificar conexión</button>
+              <div id="status" class="mt-4"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
