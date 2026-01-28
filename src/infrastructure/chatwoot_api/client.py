@@ -21,6 +21,24 @@ class ChatwootClient:
         self._config = config
         self._logger = logger or get_logger("chatwoot")
 
+    def list_contacts(self, page: int, per_page: Optional[int] = None) -> dict:
+        url = (
+            f"{self._config.base_url.rstrip('/')}/api/v1/accounts/"
+            f"{self._config.account_id}/contacts"
+        )
+        headers = {"api_access_token": self._config.api_token}
+        params = {"page": page}
+        if per_page:
+            params["per_page"] = per_page
+        response = requests.get(
+            url,
+            headers=headers,
+            params=params,
+            timeout=self._config.timeout_seconds,
+        )
+        response.raise_for_status()
+        return response.json()
+
     def check_connection(self) -> dict:
         url = f"{self._config.base_url.rstrip('/')}/api/v1/accounts/{self._config.account_id}"
         headers = {"api_access_token": self._config.api_token}
