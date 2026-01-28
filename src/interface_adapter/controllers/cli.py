@@ -11,13 +11,14 @@ from src.use_cases.health_check import run_health_checks
 def _get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Verifica conectividad con Chatwoot API y MySQL.")
     parser.add_argument("--json", action="store_true", help="Imprime salida en JSON.")
+    parser.add_argument("--debug", action="store_true", help="Habilita logs de depuración.")
     return parser.parse_args()
 
 
 def main() -> None:
     load_env_file()
     args = _get_args()
-    logger = get_logger("cli")
+    logger = get_logger("cli", level="DEBUG" if args.debug else "INFO")
     results = run_health_checks(logger=logger)
     if args.json:
         print(json.dumps(results, ensure_ascii=False, indent=2))

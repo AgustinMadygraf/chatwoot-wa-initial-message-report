@@ -42,7 +42,7 @@ def run_health_checks(logger: Optional[Logger] = None) -> dict:
 
     mysql_config = _build_mysql_config()
     if mysql_config:
-        results["mysql"] = check_mysql(mysql_config)
+        results["mysql"] = check_mysql(mysql_config, logger=logger)
     else:
         results["mysql"] = {"ok": False, "error": "Missing MySQL env vars"}
 
