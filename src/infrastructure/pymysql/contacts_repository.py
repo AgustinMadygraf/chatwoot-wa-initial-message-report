@@ -92,3 +92,11 @@ class ContactsRepository:
                 """
             )
             return list(cursor.fetchall() or [])
+
+    def count_contacts(self) -> int:
+        with self.connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) AS total FROM contacts")
+            row = cursor.fetchone()
+            if not row:
+                return 0
+            return int(row.get("total") or 0)

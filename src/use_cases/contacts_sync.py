@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable, Optional
+from typing import Callable, Dict, Iterable, Optional
 
 from src.infrastructure.chatwoot_api.client import ChatwootClient
 from src.infrastructure.pymysql.contacts_repository import ContactsRepository
@@ -22,6 +22,7 @@ def sync_contacts(
     repo: ContactsRepository,
     logger: Optional[Logger] = None,
     per_page: Optional[int] = None,
+    progress: Optional[Callable[[int, Dict[str, int]], None]] = None,
 ) -> Dict[str, int]:
     logger = logger or get_logger("contacts")
     repo.ensure_table()
@@ -49,6 +50,9 @@ def sync_contacts(
                     continue
             repo.upsert_contact(contact)
             stats["total_upserted"] += 1
+
+        if progress:
+            progress(page, stats)
 
         page += 1
 
