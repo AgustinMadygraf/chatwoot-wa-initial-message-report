@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from .client import ChatwootClient
-from .transform import categorize, normalize_literal
+from infrastructure.chatwoot_api.client import ChatwootClient
+from entities.transform import categorize, normalize_literal
 from shared.logger import Logger, get_logger
 
 

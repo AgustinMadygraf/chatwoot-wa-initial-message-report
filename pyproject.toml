@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-chatwoot-wa-initial-message-report = "chatwoot_wa_initial_message_report.cli:main"
+chatwoot-wa-initial-message-report = "interface_adapter.controllers.cli:main"
 
 [tool.pytest.ini_options]
 addopts = "-q"

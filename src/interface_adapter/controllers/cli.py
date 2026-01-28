@@ -2,9 +2,9 @@ import argparse
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from .client import ChatwootClient
-from .extractor import extract_initial_messages
-from .report import build_reports, write_reports
+from infrastructure.chatwoot_api.client import ChatwootClient
+from use_cases.extractor import extract_initial_messages
+from interface_adapter.presenters.report import build_reports, write_reports
 from shared.config import get_env, load_env_file
 from shared.logger import get_logger
 

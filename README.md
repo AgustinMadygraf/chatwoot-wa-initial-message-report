@@ -19,9 +19,87 @@ Variables de entorno soportadas:
 
 Ejemplo `.env.example` incluido sin secretos.
 
+## Punto de entrada
+Puedes ejecutar el proyecto de dos formas equivalentes:
+- Modulo: `python -m chatwoot_wa_initial_message_report`
+- Script de consola (si instalas el paquete): `chatwoot-wa-initial-message-report`
+
+El entry point del script esta definido en `pyproject.toml`:
+`chatwoot-wa-initial-message-report = "interface_adapter.controllers.cli:main"`.
+
+## Arquitectura limpia (capas)
+Estructura base:
+```
+src/
+  entities/
+  use_cases/
+  interface_adapter/
+    controllers/
+    presenters/
+    gateways/
+  infrastructure/
+    chatwoot_api/
+  shared/
+```
+
+Mapeo actual (resumen):
+- `entities`: normalizacion y categorizacion (`entities/transform.py`, `entities/categories.py`)
+- `use_cases`: caso de uso principal (`use_cases/extractor.py`)
+- `interface_adapter/controllers`: entrada CLI (`interface_adapter/controllers/cli.py`)
+- `interface_adapter/presenters`: salida CSV (`interface_adapter/presenters/report.py`)
+- `infrastructure/chatwoot_api`: cliente Chatwoot (`infrastructure/chatwoot_api/client.py`)
+
+## Venv (entorno virtual)
+Windows (PowerShell):
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+macOS/Linux:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Instalar dependencias:
+```bash
+python -m pip install -r requirements.txt
+```
+
+Instalar el paquete en modo editable (para habilitar el comando de consola):
+```bash
+python -m pip install -e .
+```
+
+Si PowerShell bloquea la activacion del venv, habilita scripts solo para la sesion actual:
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
 ## Ejecucion
 ```bash
 python -m chatwoot_wa_initial_message_report \
+  --base-url https://your-chatwoot.example.com \
+  --account-id 123 \
+  --api-token your_token \
+  --inbox-id 456 \
+  --days 15
+```
+
+Usando `run.py` (carga `.env` automaticamente):
+```bash
+python run.py \
+  --base-url https://your-chatwoot.example.com \
+  --account-id 123 \
+  --api-token your_token \
+  --inbox-id 456 \
+  --days 15
+```
+
+Via script de consola (si instalaste el paquete):
+```bash
+chatwoot-wa-initial-message-report \
   --base-url https://your-chatwoot.example.com \
   --account-id 123 \
   --api-token your_token \
