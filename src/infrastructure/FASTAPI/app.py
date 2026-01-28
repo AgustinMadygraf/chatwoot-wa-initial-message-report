@@ -17,8 +17,8 @@ def create_app() -> FastAPI:
     load_env_file()
     app = FastAPI(title=APP_TITLE)
     logger = get_logger("fastapi")
-    templates = Jinja2Templates(directory="src/interface_adapter/fastapi/templates")
-    app.mount("/static", StaticFiles(directory="src/interface_adapter/fastapi/static"), name="static")
+    templates = Jinja2Templates(directory="src/infrastructure/FASTAPI/templates")
+    app.mount("/static", StaticFiles(directory="src/infrastructure/FASTAPI/static"), name="static")
 
     @app.get("/")
     def index(request: Request):

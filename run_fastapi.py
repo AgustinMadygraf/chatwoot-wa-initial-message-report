@@ -1,4 +1,4 @@
-from src.interface_adapter.fastapi.app import create_app
+from src.infrastructure.FASTAPI.app import create_app
 
 app = create_app()
 
