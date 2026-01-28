@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from shared.logger import Logger
+from src_old.shared.logger import Logger
 
 
 class ChatwootClient:
@@ -93,4 +93,14 @@ class ChatwootClient:
         return self._request(
             "GET",
             f"/api/v1/accounts/{self.account_id}/inbox_members/{inbox_id}",
+        )
+
+    def list_contacts(self, page: int, per_page: Optional[int] = None) -> Dict[str, Any]:
+        params: Dict[str, Any] = {"page": page}
+        if per_page:
+            params["per_page"] = per_page
+        return self._request(
+            "GET",
+            f"/api/v1/accounts/{self.account_id}/contacts",
+            params=params,
         )

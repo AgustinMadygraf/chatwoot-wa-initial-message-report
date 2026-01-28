@@ -7,8 +7,8 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from shared.config import get_env, load_env_file
-from shared.logger import get_logger
+from src_old.shared.config import get_env, load_env_file
+from src_old.shared.logger import get_logger
 
 
 def _maybe_int(value: Optional[str]) -> Optional[int]:

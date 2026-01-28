@@ -6,7 +6,7 @@ from typing import Iterable, Tuple
 
 import pandas as pd
 
-from use_cases.extractor import InitialMessage
+from src_old.use_cases.extractor import InitialMessage
 
 
 def _ensure_data_dir(path: str) -> None:

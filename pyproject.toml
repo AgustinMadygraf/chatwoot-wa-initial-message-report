@@ -14,7 +14,14 @@ authors = [{ name = "" }]
 dependencies = [
   "requests>=2.31",
   "pandas>=2.0",
+  "pymysql>=1.1",
 ]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [project.scripts]
 chatwoot-wa-initial-message-report = "interface_adapter.controllers.cli:main"

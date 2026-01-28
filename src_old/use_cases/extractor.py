@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from infrastructure.chatwoot_api.client import ChatwootClient
-from entities.transform import categorize, normalize_literal
-from shared.logger import Logger, get_logger
+from src_old.infrastructure.chatwoot_api.client import ChatwootClient
+from src_old.entities.transform import categorize, normalize_literal
+from src_old.shared.logger import Logger, get_logger
 
 
 @dataclass
@@ -75,6 +75,8 @@ def list_conversations(
 ) -> Iterable[Dict]:
     page = 1
     while True:
+        if logger:
+            logger.info(f"Consultando pagina {page} de conversaciones...")
         data = client.list_conversations(
             inbox_id,
             page,
@@ -86,6 +88,8 @@ def list_conversations(
         if logger:
             logger.debug(f"Page {page} items: {len(items)}")
         if not items:
+            if logger:
+                logger.info("No hay mas conversaciones en la API.")
             break
         for item in items:
             if since is not None:
@@ -164,6 +168,12 @@ def extract_initial_messages(
             logger.warning(f"Fallback status: {active_status}")
         for convo in _iter_convos(active_status):
             convo_id = convo.get("id")
+            if stats["total_listed"] > 0 and stats["total_listed"] % 50 == 0:
+                logger.info(
+                    f"Progreso: {stats['total_listed']} listadas, "
+                    f"{stats['total_processed']} procesadas, "
+                    f"{stats['total_excluded']} excluidas"
+                )
             if convo_id in seen_ids:
                 continue
             seen_ids.add(convo_id)
@@ -171,6 +181,7 @@ def extract_initial_messages(
             if convo_id is None:
                 stats["total_excluded"] += 1
                 continue
+            logger.info(f"Buscando mensajes de conversacion {convo_id}...")
             detail = client.get_conversation(str(convo_id))
             extraction = _extract_initial_message(detail)
             if extraction is None:

@@ -1,4 +1,4 @@
-from chatwoot_wa_initial_message_report.transform import categorize, normalize_literal
+from src_old.entities.transform import categorize, normalize_literal
 
 
 def test_normalize_literal_basic():

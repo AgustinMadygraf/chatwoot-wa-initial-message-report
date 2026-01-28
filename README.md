@@ -16,6 +16,11 @@ Variables de entorno soportadas:
 - `CHATWOOT_API_ACCESS_TOKEN`
 - `CHATWOOT_INBOX_ID`
 - `CHATWOOT_DAYS`
+- `MYSQL_HOST`
+- `MYSQL_USER`
+- `MYSQL_PASSWORD`
+- `MYSQL_DB`
+- `MYSQL_PORT`
 
 Ejemplo `.env.example` incluido sin secretos.
 
@@ -118,6 +123,11 @@ python -m chatwoot_wa_initial_message_report \
 ```
 
 Si no se especifica `--days` ni `--since`, se procesa todo lo disponible.
+
+Sincronizar contactos a MySQL (cache local):
+```bash
+python run.py --sync-contacts
+```
 
 ## Salidas (CSV)
 Se escriben en `./data` (se crea si no existe):

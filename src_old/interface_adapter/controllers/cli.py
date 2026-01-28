@@ -2,11 +2,14 @@ import argparse
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from infrastructure.chatwoot_api.client import ChatwootClient
-from use_cases.extractor import extract_initial_messages
-from interface_adapter.presenters.report import build_reports, write_reports
-from shared.config import get_env, load_env_file
-from shared.logger import get_logger
+from src_old.infrastructure.chatwoot_api.client import ChatwootClient
+from src_old.infrastructure.mysql.connection import get_mysql_connection
+from src_old.infrastructure.mysql.contacts_repository import ContactsRepository
+from src_old.use_cases.contacts_sync import sync_contacts
+from src_old.use_cases.extractor import extract_initial_messages
+from src_old.interface_adapter.presenters.report import build_reports, write_reports
+from src_old.shared.config import get_env, load_env_file
+from src_old.shared.logger import get_logger
 
 
 def _parse_since(value: Optional[str]) -> Optional[datetime]:
@@ -32,8 +35,10 @@ def _get_args() -> argparse.Namespace:
     parser.add_argument("--since", type=_parse_since, default=None)
     parser.add_argument("--data-dir", default="data")
     parser.add_argument("--per-page", type=int, default=None)
+    parser.add_argument("--contacts-per-page", type=int, default=None)
     parser.add_argument("--agent-id", type=int, default=None)
     parser.add_argument("--status", default="all")
+    parser.add_argument("--sync-contacts", action="store_true")
     parser.add_argument(
         "--fallback-statuses",
         default=None,
@@ -80,6 +85,19 @@ def main() -> None:
         api_token=args.api_token,
         logger=logger if args.debug else None,
     )
+
+    if args.sync_contacts:
+        try:
+            conn = get_mysql_connection()
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "No se pudo conectar a MySQL. Verifica MYSQL_HOST, MYSQL_USER, "
+                "MYSQL_PASSWORD, MYSQL_DB y MYSQL_PORT."
+            )
+            raise SystemExit("Fallo la conexion a MySQL.") from exc
+        repo = ContactsRepository(conn)
+        sync_contacts(client, repo, logger=logger, per_page=args.contacts_per_page)
+        conn.close()
 
     try:
         members_payload = client.list_inbox_members(str(args.inbox_id))
