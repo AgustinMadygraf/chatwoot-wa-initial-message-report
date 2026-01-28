@@ -81,3 +81,14 @@ class ContactsRepository:
                 """,
                 payload,
             )
+
+    def list_contacts(self) -> list[Dict[str, Any]]:
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, name, phone_number, email, identifier, updated_at
+                FROM contacts
+                ORDER BY id ASC
+                """
+            )
+            return list(cursor.fetchall() or [])
