@@ -23,6 +23,7 @@ from src.use_cases.contacts_sync import sync_contacts
 from src.use_cases.health_check import run_health_checks
 from src.infrastructure.CLI.ui import (
     build_sync_progress_screen,
+    print_channels_table,
     print_contacts_by_channel_table,
     print_contacts_table,
     print_health_screen,
@@ -34,12 +35,16 @@ def _get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Verifica conectividad con Chatwoot API y MySQL.")
     parser.add_argument("--json", action="store_true", help="Imprime salida en JSON.")
     parser.add_argument("--debug", action="store_true", help="Habilita logs de depuración.")
-    parser.add_argument("--sync-contacts", action="store_true", help="Descarga contactos a MySQL.")
-    parser.add_argument("--list-contacts", action="store_true", help="Lista contactos desde MySQL.")
+    parser.add_argument("--sync", action="store_true", help="Descarga contactos a MySQL.")
     parser.add_argument(
-        "--list-contacts-by-channel",
+        "--list-contacts",
         action="store_true",
-        help="Lista contactos filtrando por canal/inbox desde MySQL.",
+        help="Lista contactos desde MySQL (incluye canales; filtros opcionales).",
+    )
+    parser.add_argument(
+        "--list-channel",
+        action="store_true",
+        help="Lista canales/inboxes desde MySQL.",
     )
     parser.add_argument("--inbox-id", type=int, default=None)
     parser.add_argument("--provider", type=str, default=None)
@@ -74,14 +79,14 @@ def main() -> None:
 
     if sum(
         [
-            bool(args.sync_contacts),
+            bool(args.sync),
             bool(args.list_contacts),
-            bool(args.list_contacts_by_channel),
+            bool(args.list_channel),
             bool(args.list_contacts_with_first_message),
         ]
     ) > 1:
         print(
-            "Error: usa solo una opcion: --sync-contacts, --list-contacts o "
+            "Error: usa solo una opcion: --sync, --list-contacts, --list-channel o "
             "--list-contacts-with-first-message."
         )
         sys.exit(1)
@@ -116,28 +121,6 @@ def main() -> None:
                 port=int(get_env("MYSQL_PORT", "3306")),
             )
         except Exception as exc:  # noqa: BLE001
-            print(f"Listar contactos fallo: {exc}")
-            sys.exit(1)
-
-        conn = get_mysql_connection(mysql_config)
-        repo = ContactsRepository(conn)
-        try:
-            repo.ensure_table()
-            print_contacts_table(repo.list_contacts())
-        finally:
-            conn.close()
-        return
-
-    if args.list_contacts_by_channel:
-        try:
-            mysql_config = MySQLConfig(
-                host=_require_env("MYSQL_HOST"),
-                user=_require_env("MYSQL_USER"),
-                password=_require_env("MYSQL_PASSWORD"),
-                database=_require_env("MYSQL_DB"),
-                port=int(get_env("MYSQL_PORT", "3306")),
-            )
-        except Exception as exc:  # noqa: BLE001
             print(f"Listar contactos por canal fallo: {exc}")
             sys.exit(1)
 
@@ -156,7 +139,30 @@ def main() -> None:
             conn.close()
         return
 
-    if args.sync_contacts:
+    if args.list_channel:
+        try:
+            mysql_config = MySQLConfig(
+                host=_require_env("MYSQL_HOST"),
+                user=_require_env("MYSQL_USER"),
+                password=_require_env("MYSQL_PASSWORD"),
+                database=_require_env("MYSQL_DB"),
+                port=int(get_env("MYSQL_PORT", "3306")),
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"Listar canales fallo: {exc}")
+            sys.exit(1)
+
+        conn = get_mysql_connection(mysql_config)
+        repo = ContactsRepository(conn)
+        try:
+            repo.ensure_table()
+            channels = repo.list_channels()
+            print_channels_table(channels)
+        finally:
+            conn.close()
+        return
+
+    if args.sync:
         try:
             chatwoot_config = ChatwootClientConfig(
                 base_url=_require_env("CHATWOOT_BASE_URL"),

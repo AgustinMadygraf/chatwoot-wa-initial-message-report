@@ -174,6 +174,7 @@ class ContactsRepository:
             where.append("ci.inbox_name LIKE %s")
             params.append(f"%{inbox_name}%")
         where_sql = f"WHERE {' AND '.join(where)}" if where else ""
+        join_type = "LEFT JOIN" if not where else "JOIN"
         sql = f"""
             SELECT
                 c.id,
@@ -188,12 +189,29 @@ class ContactsRepository:
                 ci.provider,
                 ci.source_id
             FROM contacts c
-            JOIN contact_inboxes ci ON ci.contact_id = c.id
+            {join_type} contact_inboxes ci ON ci.contact_id = c.id
             {where_sql}
             ORDER BY c.last_activity_at IS NULL, c.last_activity_at DESC, c.created_at DESC
         """
         with self.connection.cursor() as cursor:
             cursor.execute(sql, params)
+            return list(cursor.fetchall() or [])
+
+    def list_channels(self) -> list[Dict[str, Any]]:
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    inbox_id,
+                    inbox_name,
+                    channel_type,
+                    provider,
+                    COUNT(DISTINCT contact_id) AS contacts
+                FROM contact_inboxes
+                GROUP BY inbox_id, inbox_name, channel_type, provider
+                ORDER BY contacts DESC, inbox_id ASC
+                """
+            )
             return list(cursor.fetchall() or [])
 
     def count_contacts(self) -> int:

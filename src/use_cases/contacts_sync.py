@@ -46,14 +46,18 @@ def sync_contacts(
                 "created_at"
             )
             local_last_activity = repo.get_last_activity_at(int(contact_id))
+            should_upsert = True
             if local_last_activity is not None and remote_last_activity is not None:
                 if int(remote_last_activity) <= int(local_last_activity):
-                    stats["total_skipped"] += 1
-                    continue
-            repo.upsert_contact(contact)
+                    should_upsert = False
+            # Always refresh inboxes to populate contact_inboxes even on skips.
             repo.replace_contact_inboxes(
                 int(contact_id), contact.get("contact_inboxes") or []
             )
+            if not should_upsert:
+                stats["total_skipped"] += 1
+                continue
+            repo.upsert_contact(contact)
             stats["total_upserted"] += 1
 
         if progress:
