@@ -14,13 +14,11 @@ def print_inboxes_table(inboxes) -> None:
     console = Console()
     columns = [
         ("id", 6),
+        ("account_id", 10),
         ("name", 18),
         ("channel_type", 18),
-        ("provider", 14),
-        ("channel_id", 10),
-        ("phone_number", 16),
-        ("email", 20),
-        ("website_token", 12),
+        ("address", 20),
+        ("last_synced_at", 19),
     ]
     width = _compute_width(columns)
     _render_header(console, width, "INBOXES", "MYSQL")

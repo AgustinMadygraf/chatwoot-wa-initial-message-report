@@ -117,7 +117,7 @@ def main() -> None:
             sys.exit(1)
 
         conn = get_mysql_connection(mysql_config)
-        repo = InboxesRepository(conn)
+        repo = InboxesRepository(conn, account_id=int(_require_env("CHATWOOT_ACCOUNT_ID")))
         try:
             repo.ensure_table()
             inboxes = repo.list_inboxes()
@@ -223,7 +223,7 @@ def main() -> None:
             )
             raise SystemExit("Fallo la conexion a MySQL.") from exc
         accounts_repo = AccountsRepository(conn)
-        inboxes_repo = InboxesRepository(conn)
+        inboxes_repo = InboxesRepository(conn, account_id=int(_require_env("CHATWOOT_ACCOUNT_ID")))
         conversations_repo = ConversationsRepository(conn)
         messages_repo = MessagesRepository(conn)
         started_at = datetime.now()
