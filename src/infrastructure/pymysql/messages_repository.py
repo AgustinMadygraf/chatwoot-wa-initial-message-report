@@ -5,8 +5,10 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Tuple
 
-CREATE_MESSAGES_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS messages (
+TABLE_NAME = "4_messages"
+
+CREATE_MESSAGES_TABLE_SQL = f"""
+CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
     id BIGINT PRIMARY KEY,
     conversation_id BIGINT,
     inbox_id BIGINT,
@@ -43,13 +45,13 @@ class MessagesRepository:
     def ensure_table(self) -> None:
         with self.connection.cursor() as cursor:
             cursor.execute(CREATE_MESSAGES_TABLE_SQL)
-            cursor.execute("ALTER TABLE messages ROW_FORMAT=DYNAMIC")
+            cursor.execute(f"ALTER TABLE {TABLE_NAME} ROW_FORMAT=DYNAMIC")
             self._downgrade_dynamic_varchars(cursor)
 
     def list_messages(self) -> list[Dict[str, Any]]:
         with self.connection.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                 SELECT
                     id,
                     conversation_id,
@@ -59,7 +61,7 @@ class MessagesRepository:
                     sender__name,
                     created_at,
                     content
-                FROM messages
+                FROM {TABLE_NAME}
                 ORDER BY id DESC
                 """
             )
@@ -75,7 +77,7 @@ class MessagesRepository:
         placeholders = ", ".join([f"%({col})s" for col in columns])
         update_cols = ", ".join([f"{col}=VALUES({col})" for col in columns if col != "id"])
         sql = f"""
-            INSERT INTO messages ({insert_cols})
+            INSERT INTO {TABLE_NAME} ({insert_cols})
             VALUES ({placeholders})
             ON DUPLICATE KEY UPDATE {update_cols}
         """
@@ -88,11 +90,11 @@ class MessagesRepository:
             for column, col_type in columns.items():
                 if column in existing:
                     continue
-                cursor.execute(f"ALTER TABLE messages ADD COLUMN {column} {col_type}")
+                cursor.execute(f"ALTER TABLE {TABLE_NAME} ADD COLUMN {column} {col_type}")
 
     def _get_existing_columns(self) -> set[str]:
         with self.connection.cursor() as cursor:
-            cursor.execute("SHOW COLUMNS FROM messages")
+            cursor.execute(f"SHOW COLUMNS FROM {TABLE_NAME}")
             rows = cursor.fetchall() or []
             return {row["Field"] for row in rows}
 
@@ -102,9 +104,9 @@ class MessagesRepository:
             SELECT COLUMN_NAME, DATA_TYPE
             FROM information_schema.COLUMNS
             WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = 'messages'
+              AND TABLE_NAME = %s
             """
-        )
+        , (TABLE_NAME,))
         rows = cursor.fetchall() or []
         for row in rows:
             name = row.get("COLUMN_NAME")
@@ -112,7 +114,7 @@ class MessagesRepository:
             if not name or name in BASE_COLUMNS:
                 continue
             if data_type in {"varchar", "char"}:
-                cursor.execute(f"ALTER TABLE messages MODIFY COLUMN {name} TEXT")
+                cursor.execute(f"ALTER TABLE {TABLE_NAME} MODIFY COLUMN {name} TEXT")
 
 
 def _flatten_payload(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, str]]:

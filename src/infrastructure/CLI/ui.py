@@ -10,106 +10,6 @@ from rich.text import Text
 SCREEN_WIDTH = 80
 
 
-def print_contacts_table(contacts, include_first_message: bool = False) -> None:
-    console = Console()
-    if include_first_message:
-        columns = [
-            ("id", 6),
-            ("name", 16),
-            ("first_message", 48),
-        ]
-    else:
-        columns = [
-            ("id", 6),
-            ("name", 24),
-            ("phone_number", 16),
-            ("email", 28),
-            ("created_at", 19),
-            ("last_activity_at", 19),
-        ]
-    width = _compute_width(columns)
-    _render_header(
-        console,
-        width,
-        "LISTADO CONTACTOS",
-        "CHATWOOT API" if include_first_message else "MYSQL",
-    )
-    table = Table(
-        box=box.ASCII,
-        show_header=True,
-        header_style="bold yellow",
-        row_styles=["", ""],
-    )
-    for label, col_width in columns:
-        table.add_column(
-            label.upper(),
-            width=col_width,
-            min_width=col_width,
-            max_width=col_width,
-            overflow="ellipsis",
-            no_wrap=True,
-            style="green",
-        )
-    for col in table.columns:
-        col.style = "green"
-    table.columns[0].style = "bold green"
-    for contact in contacts:
-        row = []
-        for key, col_width in columns:
-            raw = contact.get(key)
-            value = _format_datetime_cell(key, raw)
-            value = _clean_cell(value)
-            row.append(_truncate(value, col_width))
-        table.add_row(*row)
-    console.print(table)
-    _render_footer(console, width)
-
-
-def print_contacts_by_channel_table(contacts) -> None:
-    console = Console()
-    columns = [
-        ("id", 6),
-        ("name", 12),
-        ("phone_number", 14),
-        ("inbox_name", 14),
-        ("provider", 10),
-        ("channel_type", 12),
-        ("created_at", 19),
-        ("last_activity_at", 19),
-    ]
-    width = _compute_width(columns)
-    _render_header(console, width, "CONTACTOS POR CANAL", "MYSQL")
-    table = Table(
-        box=box.ASCII,
-        show_header=True,
-        header_style="bold yellow",
-        row_styles=["", ""],
-    )
-    for label, col_width in columns:
-        table.add_column(
-            label.upper(),
-            width=col_width,
-            min_width=col_width,
-            max_width=col_width,
-            overflow="ellipsis",
-            no_wrap=True,
-            style="green",
-        )
-    for col in table.columns:
-        col.style = "green"
-    table.columns[0].style = "bold green"
-    for contact in contacts:
-        row = []
-        for key, col_width in columns:
-            raw = contact.get(key)
-            value = _format_datetime_cell(key, raw)
-            value = _clean_cell(value)
-            row.append(_truncate(value, col_width))
-        table.add_row(*row)
-    console.print(table)
-    _render_footer(console, width)
-
-
 def print_inboxes_table(inboxes) -> None:
     console = Console()
     columns = [
@@ -329,7 +229,6 @@ def print_health_screen(results: dict) -> None:
 def print_sync_screen(
     stats: dict,
     *,
-    total_in_db: int = 0,
     started_at: datetime | None = None,
 ) -> None:
     console = Console()
@@ -338,7 +237,7 @@ def print_sync_screen(
         ("value", 37),
     ]
     width = SCREEN_WIDTH
-    _render_header(console, width, "SYNC CONTACTOS", "MYSQL")
+    _render_header(console, width, "SYNC GENERAL", "MYSQL")
     table = Table(
         box=box.ASCII,
         show_header=True,
@@ -357,10 +256,15 @@ def print_sync_screen(
         )
     table.columns[0].style = "green"
     table.columns[1].style = "bold green"
-    table.add_row("listados", str(stats.get("total_listed", 0)))
-    table.add_row("upserted", str(stats.get("total_upserted", 0)))
-    table.add_row("skipped", str(stats.get("total_skipped", 0)))
-    table.add_row("total_db", str(total_in_db))
+    for key, label in (
+        ("accounts_upserted", "accounts_upserted"),
+        ("inboxes_upserted", "inboxes_upserted"),
+        ("conversations_upserted", "conversations_upserted"),
+        ("messages_upserted", "messages_upserted"),
+        ("messages_errors", "messages_errors"),
+    ):
+        if key in stats:
+            table.add_row(label, str(stats.get(key)))
     console.print(table)
     elapsed = None
     if started_at:
@@ -394,10 +298,6 @@ def build_sync_progress_screen(stats: dict, *, started_at: datetime | None = Non
     table.columns[1].style = "bold green"
     rows = [
         ("fase", "phase"),
-        ("contactos_pagina", "contacts_page"),
-        ("contactos_listados", "contacts_listed"),
-        ("contactos_upserted", "contacts_upserted"),
-        ("contactos_skipped", "contacts_skipped"),
         ("accounts_upserted", "accounts_upserted"),
         ("inboxes_upserted", "inboxes_upserted"),
         ("conversaciones_pagina", "conversations_page"),

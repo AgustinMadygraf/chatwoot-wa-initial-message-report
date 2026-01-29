@@ -5,8 +5,10 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Tuple
 
-CREATE_CONVERSATIONS_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS conversations (
+TABLE_NAME = "3_conversations"
+
+CREATE_CONVERSATIONS_TABLE_SQL = f"""
+CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
     id BIGINT PRIMARY KEY,
     account_id BIGINT,
     inbox_id BIGINT,
@@ -35,13 +37,13 @@ class ConversationsRepository:
     def ensure_table(self) -> None:
         with self.connection.cursor() as cursor:
             cursor.execute(CREATE_CONVERSATIONS_TABLE_SQL)
-            cursor.execute("ALTER TABLE conversations ROW_FORMAT=DYNAMIC")
+            cursor.execute(f"ALTER TABLE {TABLE_NAME} ROW_FORMAT=DYNAMIC")
             self._downgrade_dynamic_varchars(cursor)
 
     def list_conversations(self) -> list[Dict[str, Any]]:
         with self.connection.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                 SELECT
                     id,
                     inbox_id,
@@ -50,7 +52,7 @@ class ConversationsRepository:
                     last_activity_at,
                     meta__sender__id,
                     meta__sender__name
-                FROM conversations
+                FROM {TABLE_NAME}
                 ORDER BY id DESC
                 """
             )
@@ -66,7 +68,7 @@ class ConversationsRepository:
         placeholders = ", ".join([f"%({col})s" for col in columns])
         update_cols = ", ".join([f"{col}=VALUES({col})" for col in columns if col != "id"])
         sql = f"""
-            INSERT INTO conversations ({insert_cols})
+            INSERT INTO {TABLE_NAME} ({insert_cols})
             VALUES ({placeholders})
             ON DUPLICATE KEY UPDATE {update_cols}
         """
@@ -79,11 +81,11 @@ class ConversationsRepository:
             for column, col_type in columns.items():
                 if column in existing:
                     continue
-                cursor.execute(f"ALTER TABLE conversations ADD COLUMN {column} {col_type}")
+                cursor.execute(f"ALTER TABLE {TABLE_NAME} ADD COLUMN {column} {col_type}")
 
     def _get_existing_columns(self) -> set[str]:
         with self.connection.cursor() as cursor:
-            cursor.execute("SHOW COLUMNS FROM conversations")
+            cursor.execute(f"SHOW COLUMNS FROM {TABLE_NAME}")
             rows = cursor.fetchall() or []
             return {row["Field"] for row in rows}
 
@@ -93,9 +95,9 @@ class ConversationsRepository:
             SELECT COLUMN_NAME, DATA_TYPE
             FROM information_schema.COLUMNS
             WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = 'conversations'
+              AND TABLE_NAME = %s
             """
-        )
+        , (TABLE_NAME,))
         rows = cursor.fetchall() or []
         for row in rows:
             name = row.get("COLUMN_NAME")
@@ -103,7 +105,7 @@ class ConversationsRepository:
             if not name or name in BASE_COLUMNS:
                 continue
             if data_type in {"varchar", "char"}:
-                cursor.execute(f"ALTER TABLE conversations MODIFY COLUMN {name} TEXT")
+                cursor.execute(f"ALTER TABLE {TABLE_NAME} MODIFY COLUMN {name} TEXT")
 
 
 def _flatten_payload(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, str]]:

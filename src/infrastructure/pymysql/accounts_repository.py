@@ -5,8 +5,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Iterable
 
 
-CREATE_ACCOUNTS_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS accounts (
+TABLE_NAME = "1_accounts"
+
+CREATE_ACCOUNTS_TABLE_SQL = f"""
+CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
     id BIGINT PRIMARY KEY,
     name VARCHAR(255),
     locale VARCHAR(32),
@@ -38,7 +40,7 @@ class AccountsRepository:
     def list_accounts(self) -> list[Dict[str, Any]]:
         with self.connection.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                 SELECT
                     id,
                     name,
@@ -48,7 +50,7 @@ class AccountsRepository:
                     support_email,
                     created_at,
                     latest_chatwoot_version
-                FROM accounts
+                FROM {TABLE_NAME}
                 ORDER BY id ASC
                 """
             )
@@ -64,7 +66,7 @@ class AccountsRepository:
         placeholders = ", ".join([f"%({col})s" for col in columns])
         update_cols = ", ".join([f"{col}=VALUES({col})" for col in columns if col != "id"])
         sql = f"""
-            INSERT INTO accounts ({insert_cols})
+            INSERT INTO {TABLE_NAME} ({insert_cols})
             VALUES ({placeholders})
             ON DUPLICATE KEY UPDATE {update_cols}
         """
@@ -81,7 +83,7 @@ class AccountsRepository:
 
     def _get_existing_columns(self) -> set[str]:
         with self.connection.cursor() as cursor:
-            cursor.execute("SHOW COLUMNS FROM accounts")
+            cursor.execute(f"SHOW COLUMNS FROM {TABLE_NAME}")
             rows = cursor.fetchall() or []
             return {row["Field"] for row in rows}
 

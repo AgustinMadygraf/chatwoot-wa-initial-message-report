@@ -5,8 +5,10 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Tuple
 
-CREATE_INBOXES_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS inboxes (
+TABLE_NAME = "2_inboxes"
+
+CREATE_INBOXES_TABLE_SQL = f"""
+CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
     id BIGINT PRIMARY KEY,
     name VARCHAR(255),
     channel_id BIGINT,
@@ -41,13 +43,13 @@ class InboxesRepository:
     def ensure_table(self) -> None:
         with self.connection.cursor() as cursor:
             cursor.execute(CREATE_INBOXES_TABLE_SQL)
-            cursor.execute("ALTER TABLE inboxes ROW_FORMAT=DYNAMIC")
+            cursor.execute(f"ALTER TABLE {TABLE_NAME} ROW_FORMAT=DYNAMIC")
             self._downgrade_dynamic_varchars(cursor)
 
     def list_inboxes(self) -> list[Dict[str, Any]]:
         with self.connection.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                 SELECT
                     id,
                     name,
@@ -58,7 +60,7 @@ class InboxesRepository:
                     email,
                     website_url,
                     website_token
-                FROM inboxes
+                FROM {TABLE_NAME}
                 ORDER BY id ASC
                 """
             )
@@ -74,7 +76,7 @@ class InboxesRepository:
         placeholders = ", ".join([f"%({col})s" for col in columns])
         update_cols = ", ".join([f"{col}=VALUES({col})" for col in columns if col != "id"])
         sql = f"""
-            INSERT INTO inboxes ({insert_cols})
+            INSERT INTO {TABLE_NAME} ({insert_cols})
             VALUES ({placeholders})
             ON DUPLICATE KEY UPDATE {update_cols}
         """
@@ -87,11 +89,11 @@ class InboxesRepository:
             for column, col_type in columns.items():
                 if column in existing:
                     continue
-                cursor.execute(f"ALTER TABLE inboxes ADD COLUMN {column} {col_type}")
+                cursor.execute(f"ALTER TABLE {TABLE_NAME} ADD COLUMN {column} {col_type}")
 
     def _get_existing_columns(self) -> set[str]:
         with self.connection.cursor() as cursor:
-            cursor.execute("SHOW COLUMNS FROM inboxes")
+            cursor.execute(f"SHOW COLUMNS FROM {TABLE_NAME}")
             rows = cursor.fetchall() or []
             return {row["Field"] for row in rows}
 
@@ -101,9 +103,9 @@ class InboxesRepository:
             SELECT COLUMN_NAME, DATA_TYPE
             FROM information_schema.COLUMNS
             WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = 'inboxes'
+              AND TABLE_NAME = %s
             """
-        )
+        , (TABLE_NAME,))
         rows = cursor.fetchall() or []
         for row in rows:
             name = row.get("COLUMN_NAME")
@@ -111,7 +113,7 @@ class InboxesRepository:
             if not name or name in BASE_COLUMNS:
                 continue
             if data_type in {"varchar", "char"}:
-                cursor.execute(f"ALTER TABLE inboxes MODIFY COLUMN {name} TEXT")
+                cursor.execute(f"ALTER TABLE {TABLE_NAME} MODIFY COLUMN {name} TEXT")
 
 
 def _flatten_payload(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, str]]:
