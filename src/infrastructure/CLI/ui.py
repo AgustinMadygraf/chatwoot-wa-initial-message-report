@@ -200,6 +200,95 @@ def print_accounts_table(accounts) -> None:
     _render_footer(console, width)
 
 
+def print_conversations_table(conversations) -> None:
+    console = Console()
+    columns = [
+        ("id", 6),
+        ("inbox_id", 8),
+        ("status", 10),
+        ("meta__sender__id", 10),
+        ("meta__sender__name", 16),
+        ("created_at", 19),
+        ("last_activity_at", 19),
+    ]
+    width = _compute_width(columns)
+    _render_header(console, width, "CONVERSACIONES", "MYSQL")
+    table = Table(
+        box=box.ASCII,
+        show_header=True,
+        header_style="bold yellow",
+        row_styles=["", ""],
+    )
+    for label, col_width in columns:
+        table.add_column(
+            label.upper(),
+            width=col_width,
+            min_width=col_width,
+            max_width=col_width,
+            overflow="ellipsis",
+            no_wrap=True,
+            style="green",
+        )
+    for col in table.columns:
+        col.style = "green"
+    table.columns[0].style = "bold green"
+    for convo in conversations:
+        row = []
+        for key, col_width in columns:
+            raw = convo.get(key)
+            value = _format_datetime_cell(key, raw)
+            value = _clean_cell(value)
+            row.append(_truncate(value, col_width))
+        table.add_row(*row)
+    console.print(table)
+    _render_footer(console, width)
+
+
+def print_messages_table(messages) -> None:
+    console = Console()
+    columns = [
+        ("id", 7),
+        ("conversation_id", 8),
+        ("inbox_id", 8),
+        ("message_type", 8),
+        ("sender_type", 10),
+        ("sender__name", 14),
+        ("created_at", 19),
+        ("content", 28),
+    ]
+    width = _compute_width(columns)
+    _render_header(console, width, "MENSAJES", "MYSQL")
+    table = Table(
+        box=box.ASCII,
+        show_header=True,
+        header_style="bold yellow",
+        row_styles=["", ""],
+    )
+    for label, col_width in columns:
+        table.add_column(
+            label.upper(),
+            width=col_width,
+            min_width=col_width,
+            max_width=col_width,
+            overflow="ellipsis",
+            no_wrap=True,
+            style="green",
+        )
+    for col in table.columns:
+        col.style = "green"
+    table.columns[0].style = "bold green"
+    for msg in messages:
+        row = []
+        for key, col_width in columns:
+            raw = msg.get(key)
+            value = _format_datetime_cell(key, raw)
+            value = _clean_cell(value)
+            row.append(_truncate(value, col_width))
+        table.add_row(*row)
+    console.print(table)
+    _render_footer(console, width)
+
+
 def print_health_screen(results: dict) -> None:
     console = Console()
     columns = [
@@ -279,7 +368,7 @@ def print_sync_screen(
     _render_footer(console, width, elapsed=elapsed)
 
 
-def build_sync_progress_screen(page: int, stats: dict, *, started_at: datetime | None = None) -> Group:
+def build_sync_progress_screen(stats: dict, *, started_at: datetime | None = None) -> Group:
     columns = [
         ("metric", 36),
         ("value", 37),
@@ -303,10 +392,23 @@ def build_sync_progress_screen(page: int, stats: dict, *, started_at: datetime |
         )
     table.columns[0].style = "green"
     table.columns[1].style = "bold green"
-    table.add_row("pagina", str(page))
-    table.add_row("listados", str(stats.get("total_listed", 0)))
-    table.add_row("upserted", str(stats.get("total_upserted", 0)))
-    table.add_row("skipped", str(stats.get("total_skipped", 0)))
+    rows = [
+        ("fase", "phase"),
+        ("contactos_pagina", "contacts_page"),
+        ("contactos_listados", "contacts_listed"),
+        ("contactos_upserted", "contacts_upserted"),
+        ("contactos_skipped", "contacts_skipped"),
+        ("accounts_upserted", "accounts_upserted"),
+        ("inboxes_upserted", "inboxes_upserted"),
+        ("conversaciones_pagina", "conversations_page"),
+        ("conversaciones_upserted", "conversations_upserted"),
+        ("mensajes_upserted", "messages_upserted"),
+        ("mensajes_errores", "messages_errors"),
+        ("ultimo_conversation_id", "messages_conversation_id"),
+    ]
+    for label, key in rows:
+        if key in stats:
+            table.add_row(label, str(stats.get(key)))
     elapsed = None
     if started_at:
         elapsed = str(datetime.now() - started_at).split(".", maxsplit=1)[0]

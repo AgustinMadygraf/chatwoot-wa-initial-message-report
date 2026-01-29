@@ -18,6 +18,8 @@ from src.infrastructure.pymysql.connection import get_mysql_connection
 from src.infrastructure.pymysql.contacts_repository import ContactsRepository
 from src.infrastructure.pymysql.accounts_repository import AccountsRepository
 from src.infrastructure.pymysql.inboxes_repository import InboxesRepository
+from src.infrastructure.pymysql.conversations_repository import ConversationsRepository
+from src.infrastructure.pymysql.messages_repository import MessagesRepository
 from src.shared.config import get_env, load_env_file
 from src.shared.logger import get_logger
 from src.use_cases.accounts_sync import sync_account
@@ -25,13 +27,17 @@ from src.use_cases.contacts_list import list_contacts_with_first_message
 from src.use_cases.contacts_sync import sync_contacts
 from src.use_cases.health_check import run_health_checks
 from src.use_cases.inboxes_sync import sync_inboxes
+from src.use_cases.conversations_sync import sync_conversations
+from src.use_cases.messages_sync import sync_messages
 from src.infrastructure.CLI.ui import (
     build_sync_progress_screen,
     print_accounts_table,
     print_contacts_by_channel_table,
     print_contacts_table,
+    print_conversations_table,
     print_health_screen,
     print_inboxes_table,
+    print_messages_table,
     print_sync_screen,
 )
 
@@ -55,6 +61,16 @@ def _get_args() -> argparse.Namespace:
         "--list-accounts",
         action="store_true",
         help="Lista detalles de la cuenta desde MySQL.",
+    )
+    parser.add_argument(
+        "--list-conversations",
+        action="store_true",
+        help="Lista conversaciones desde MySQL.",
+    )
+    parser.add_argument(
+        "--list-messages",
+        action="store_true",
+        help="Lista mensajes desde MySQL.",
     )
     parser.add_argument("--inbox-id", type=int, default=None)
     parser.add_argument("--provider", type=str, default=None)
@@ -94,11 +110,14 @@ def main() -> None:
             bool(args.list_contacts_with_first_message),
             bool(args.list_accounts),
             bool(args.list_inboxes),
+            bool(args.list_conversations),
+            bool(args.list_messages),
         ]
     ) > 1:
         print(
             "Error: usa solo una opcion: --sync, --list-contacts, --list-inboxes, "
-            "--list-contacts-with-first-message o --list-accounts."
+            "--list-contacts-with-first-message, --list-accounts, --list-conversations "
+            "o --list-messages."
         )
         sys.exit(1)
 
@@ -173,6 +192,52 @@ def main() -> None:
             conn.close()
         return
 
+    if args.list_conversations:
+        try:
+            mysql_config = MySQLConfig(
+                host=_require_env("MYSQL_HOST"),
+                user=_require_env("MYSQL_USER"),
+                password=_require_env("MYSQL_PASSWORD"),
+                database=_require_env("MYSQL_DB"),
+                port=int(get_env("MYSQL_PORT", "3306")),
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"Listar conversaciones fallo: {exc}")
+            sys.exit(1)
+
+        conn = get_mysql_connection(mysql_config)
+        repo = ConversationsRepository(conn)
+        try:
+            repo.ensure_table()
+            conversations = repo.list_conversations()
+            print_conversations_table(conversations)
+        finally:
+            conn.close()
+        return
+
+    if args.list_messages:
+        try:
+            mysql_config = MySQLConfig(
+                host=_require_env("MYSQL_HOST"),
+                user=_require_env("MYSQL_USER"),
+                password=_require_env("MYSQL_PASSWORD"),
+                database=_require_env("MYSQL_DB"),
+                port=int(get_env("MYSQL_PORT", "3306")),
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"Listar mensajes fallo: {exc}")
+            sys.exit(1)
+
+        conn = get_mysql_connection(mysql_config)
+        repo = MessagesRepository(conn)
+        try:
+            repo.ensure_table()
+            messages = repo.list_messages()
+            print_messages_table(messages)
+        finally:
+            conn.close()
+        return
+
     if args.list_accounts:
         try:
             mysql_config = MySQLConfig(
@@ -226,31 +291,94 @@ def main() -> None:
         repo = ContactsRepository(conn)
         accounts_repo = AccountsRepository(conn)
         inboxes_repo = InboxesRepository(conn)
+        conversations_repo = ConversationsRepository(conn)
+        messages_repo = MessagesRepository(conn)
         started_at = datetime.now()
         progress_logger = logger if args.debug else get_logger("cli", level="WARNING")
 
+        sync_stats = {
+            "phase": "contactos",
+            "contacts_page": 0,
+            "contacts_listed": 0,
+            "contacts_upserted": 0,
+            "contacts_skipped": 0,
+        }
+
+        def _update_live() -> None:
+            live.update(build_sync_progress_screen(sync_stats, started_at=started_at))
+
         def _progress(page: int, current_stats: dict) -> None:
-            live.update(
-                build_sync_progress_screen(page, current_stats, started_at=started_at)
-            )
+            sync_stats["phase"] = "contactos"
+            sync_stats["contacts_page"] = page
+            sync_stats["contacts_listed"] = current_stats.get("total_listed", 0)
+            sync_stats["contacts_upserted"] = current_stats.get("total_upserted", 0)
+            sync_stats["contacts_skipped"] = current_stats.get("total_skipped", 0)
+            _update_live()
 
         with Live(
-            build_sync_progress_screen(
-                0,
-                {"total_listed": 0, "total_upserted": 0, "total_skipped": 0},
-                started_at=started_at,
-            ),
+            build_sync_progress_screen(sync_stats, started_at=started_at),
             refresh_per_second=4,
         ) as live:
-            stats = sync_contacts(
-                client,
-                repo,
-                logger=progress_logger,
-                per_page=args.contacts_per_page,
-                progress=_progress,
-            )
-        sync_account(client, accounts_repo, logger=progress_logger)
-        sync_inboxes(client, inboxes_repo, logger=progress_logger)
+            try:
+                stats = sync_contacts(
+                    client,
+                    repo,
+                    logger=progress_logger,
+                    per_page=args.contacts_per_page,
+                    progress=_progress,
+                )
+                sync_stats["phase"] = "accounts"
+                _update_live()
+                sync_stats["accounts_upserted"] = sync_account(
+                    client, accounts_repo, logger=progress_logger
+                ).get("total_upserted", 0)
+                _update_live()
+                sync_stats["phase"] = "inboxes"
+                _update_live()
+                sync_stats["inboxes_upserted"] = sync_inboxes(
+                    client, inboxes_repo, logger=progress_logger
+                ).get("total_upserted", 0)
+                _update_live()
+                sync_stats["phase"] = "conversaciones"
+                _update_live()
+
+                def _convo_progress(page: int, total: int) -> None:
+                    sync_stats["conversations_page"] = page
+                    sync_stats["conversations_upserted"] = total
+                    _update_live()
+
+                conversation_ids = sync_conversations(
+                    client,
+                    conversations_repo,
+                    logger=progress_logger,
+                    per_page=args.contacts_per_page,
+                    progress=_convo_progress,
+                )
+                sync_stats["phase"] = "mensajes"
+                _update_live()
+
+                def _msg_progress(conversation_id: int, total: int, errors: int) -> None:
+                    sync_stats["messages_conversation_id"] = conversation_id
+                    sync_stats["messages_upserted"] = total
+                    sync_stats["messages_errors"] = errors
+                    _update_live()
+
+                sync_messages(
+                    client,
+                    messages_repo,
+                    conversation_ids,
+                    logger=progress_logger,
+                    per_page=args.contacts_per_page,
+                    progress=_msg_progress,
+                )
+            except KeyboardInterrupt:
+                sync_stats["phase"] = "cancelado"
+                _update_live()
+                print("\\nSync cancelado por el usuario.")
+            except Exception as exc:  # noqa: BLE001
+                sync_stats["phase"] = "error"
+                _update_live()
+                print(f"\nSync fallo: {exc}")
         total_in_db = repo.count_contacts()
         conn.close()
         print_sync_screen(stats, total_in_db=total_in_db, started_at=started_at)
