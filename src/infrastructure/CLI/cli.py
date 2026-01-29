@@ -111,6 +111,7 @@ def main() -> None:
         conn = get_mysql_connection(mysql_config)
         repo = ContactsRepository(conn)
         try:
+            repo.ensure_table()
             print_contacts_table(repo.list_contacts())
         finally:
             conn.close()

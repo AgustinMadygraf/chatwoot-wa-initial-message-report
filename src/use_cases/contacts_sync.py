@@ -42,10 +42,12 @@ def sync_contacts(
                 stats["total_skipped"] += 1
                 continue
             stats["total_listed"] += 1
-            remote_updated_at = contact.get("updated_at")
-            local_updated_at = repo.get_updated_at(int(contact_id))
-            if local_updated_at is not None and remote_updated_at is not None:
-                if int(remote_updated_at) <= int(local_updated_at):
+            remote_last_activity = contact.get("last_activity_at") or contact.get(
+                "created_at"
+            )
+            local_last_activity = repo.get_last_activity_at(int(contact_id))
+            if local_last_activity is not None and remote_last_activity is not None:
+                if int(remote_last_activity) <= int(local_last_activity):
                     stats["total_skipped"] += 1
                     continue
             repo.upsert_contact(contact)

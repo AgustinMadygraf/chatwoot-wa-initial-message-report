@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from rich import box
 from rich.console import Console, Group
@@ -21,12 +21,13 @@ def print_contacts_table(contacts, include_first_message: bool = False) -> None:
     else:
         columns = [
             ("id", 6),
-            ("name", 17),
-            ("phone_number", 12),
-            ("email", 21),
-            ("updated_at", 8),
+            ("name", 24),
+            ("phone_number", 16),
+            ("email", 28),
+            ("created_at", 19),
+            ("last_activity_at", 19),
         ]
-    width = SCREEN_WIDTH
+    width = _compute_width(columns)
     _render_header(
         console,
         width,
@@ -56,7 +57,7 @@ def print_contacts_table(contacts, include_first_message: bool = False) -> None:
         row = []
         for key, col_width in columns:
             raw = contact.get(key)
-            value = "" if raw is None else str(raw)
+            value = _format_datetime_cell(key, raw)
             value = _clean_cell(value)
             row.append(_truncate(value, col_width))
         table.add_row(*row)
@@ -205,6 +206,19 @@ def _header_lines(width: int, title: str, source: str) -> Group:
     title_text = _fit_text(f"{title} | FUENTE: {source}", max(0, width - 20))
     header = Text(f"{title_text}".ljust(width - 20) + timestamp.rjust(20), style="green")
     return Group(line, header, line)
+
+
+def _format_datetime_cell(key: str, raw: object) -> str:
+    if raw is None:
+        return ""
+    if key in ("created_at", "last_activity_at"):
+        try:
+            ts = int(raw)
+        except (TypeError, ValueError):
+            return str(raw)
+        dt = datetime.fromtimestamp(ts, tz=timezone(timedelta(hours=-3)))
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    return str(raw)
 
 
 def _footer_line(width: int, *, elapsed: str | None = None) -> Text:
