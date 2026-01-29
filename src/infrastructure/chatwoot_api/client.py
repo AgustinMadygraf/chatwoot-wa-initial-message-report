@@ -64,3 +64,10 @@ class ChatwootClient:
         except requests.RequestException as exc:
             self._logger.warning(f"Chatwoot check failed: {exc}")
             return {"ok": False, "error": str(exc)}
+
+    def get_account_details(self) -> dict:
+        url = f"{self._config.base_url.rstrip('/')}/api/v1/accounts/{self._config.account_id}"
+        headers = {"api_access_token": self._config.api_token}
+        response = requests.get(url, headers=headers, timeout=self._config.timeout_seconds)
+        response.raise_for_status()
+        return response.json()

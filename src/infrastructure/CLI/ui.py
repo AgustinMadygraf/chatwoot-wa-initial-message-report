@@ -152,6 +152,51 @@ def print_channels_table(channels) -> None:
     _render_footer(console, width)
 
 
+def print_accounts_table(accounts) -> None:
+    console = Console()
+    columns = [
+        ("id", 6),
+        ("name", 18),
+        ("status", 10),
+        ("locale", 6),
+        ("domain", 18),
+        ("support_email", 24),
+        ("created_at", 19),
+        ("latest_chatwoot_version", 10),
+    ]
+    width = _compute_width(columns)
+    _render_header(console, width, "CUENTAS", "MYSQL")
+    table = Table(
+        box=box.ASCII,
+        show_header=True,
+        header_style="bold yellow",
+        row_styles=["", ""],
+    )
+    for label, col_width in columns:
+        table.add_column(
+            label.upper(),
+            width=col_width,
+            min_width=col_width,
+            max_width=col_width,
+            overflow="ellipsis",
+            no_wrap=True,
+            style="green",
+        )
+    for col in table.columns:
+        col.style = "green"
+    table.columns[0].style = "bold green"
+    for account in accounts:
+        row = []
+        for key, col_width in columns:
+            raw = account.get(key)
+            value = _format_datetime_cell(key, raw)
+            value = _clean_cell(value)
+            row.append(_truncate(value, col_width))
+        table.add_row(*row)
+    console.print(table)
+    _render_footer(console, width)
+
+
 def print_health_screen(results: dict) -> None:
     console = Console()
     columns = [

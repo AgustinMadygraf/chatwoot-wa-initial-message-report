@@ -16,13 +16,16 @@ from src.entities.mysql_config import MySQLConfig
 from src.infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
 from src.infrastructure.pymysql.connection import get_mysql_connection
 from src.infrastructure.pymysql.contacts_repository import ContactsRepository
+from src.infrastructure.pymysql.accounts_repository import AccountsRepository
 from src.shared.config import get_env, load_env_file
 from src.shared.logger import get_logger
+from src.use_cases.accounts_sync import sync_account
 from src.use_cases.contacts_list import list_contacts_with_first_message
 from src.use_cases.contacts_sync import sync_contacts
 from src.use_cases.health_check import run_health_checks
 from src.infrastructure.CLI.ui import (
     build_sync_progress_screen,
+    print_accounts_table,
     print_channels_table,
     print_contacts_by_channel_table,
     print_contacts_table,
@@ -45,6 +48,11 @@ def _get_args() -> argparse.Namespace:
         "--list-channel",
         action="store_true",
         help="Lista canales/inboxes desde MySQL.",
+    )
+    parser.add_argument(
+        "--list-accounts",
+        action="store_true",
+        help="Lista detalles de la cuenta desde MySQL.",
     )
     parser.add_argument("--inbox-id", type=int, default=None)
     parser.add_argument("--provider", type=str, default=None)
@@ -83,11 +91,12 @@ def main() -> None:
             bool(args.list_contacts),
             bool(args.list_channel),
             bool(args.list_contacts_with_first_message),
+            bool(args.list_accounts),
         ]
     ) > 1:
         print(
             "Error: usa solo una opcion: --sync, --list-contacts, --list-channel o "
-            "--list-contacts-with-first-message."
+            "--list-contacts-with-first-message o --list-accounts."
         )
         sys.exit(1)
 
@@ -162,6 +171,29 @@ def main() -> None:
             conn.close()
         return
 
+    if args.list_accounts:
+        try:
+            mysql_config = MySQLConfig(
+                host=_require_env("MYSQL_HOST"),
+                user=_require_env("MYSQL_USER"),
+                password=_require_env("MYSQL_PASSWORD"),
+                database=_require_env("MYSQL_DB"),
+                port=int(get_env("MYSQL_PORT", "3306")),
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"Listar cuentas fallo: {exc}")
+            sys.exit(1)
+
+        conn = get_mysql_connection(mysql_config)
+        repo = AccountsRepository(conn)
+        try:
+            repo.ensure_table()
+            accounts = repo.list_accounts()
+            print_accounts_table(accounts)
+        finally:
+            conn.close()
+        return
+
     if args.sync:
         try:
             chatwoot_config = ChatwootClientConfig(
@@ -190,6 +222,7 @@ def main() -> None:
             )
             raise SystemExit("Fallo la conexion a MySQL.") from exc
         repo = ContactsRepository(conn)
+        accounts_repo = AccountsRepository(conn)
         started_at = datetime.now()
         progress_logger = logger if args.debug else get_logger("cli", level="WARNING")
 
@@ -213,6 +246,7 @@ def main() -> None:
                 per_page=args.contacts_per_page,
                 progress=_progress,
             )
+        sync_account(client, accounts_repo, logger=progress_logger)
         total_in_db = repo.count_contacts()
         conn.close()
         print_sync_screen(stats, total_in_db=total_in_db, started_at=started_at)
