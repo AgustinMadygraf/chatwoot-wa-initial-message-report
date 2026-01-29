@@ -49,6 +49,16 @@ class ChatwootClient:
         response.raise_for_status()
         return response.json()
 
+    def list_inboxes(self) -> dict:
+        url = (
+            f"{self._config.base_url.rstrip('/')}/api/v1/accounts/"
+            f"{self._config.account_id}/inboxes"
+        )
+        headers = {"api_access_token": self._config.api_token}
+        response = requests.get(url, headers=headers, timeout=self._config.timeout_seconds)
+        response.raise_for_status()
+        return response.json()
+
     def check_connection(self) -> dict:
         url = f"{self._config.base_url.rstrip('/')}/api/v1/accounts/{self._config.account_id}"
         headers = {"api_access_token": self._config.api_token}

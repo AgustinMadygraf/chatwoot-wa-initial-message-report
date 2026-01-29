@@ -17,19 +17,21 @@ from src.infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClien
 from src.infrastructure.pymysql.connection import get_mysql_connection
 from src.infrastructure.pymysql.contacts_repository import ContactsRepository
 from src.infrastructure.pymysql.accounts_repository import AccountsRepository
+from src.infrastructure.pymysql.inboxes_repository import InboxesRepository
 from src.shared.config import get_env, load_env_file
 from src.shared.logger import get_logger
 from src.use_cases.accounts_sync import sync_account
 from src.use_cases.contacts_list import list_contacts_with_first_message
 from src.use_cases.contacts_sync import sync_contacts
 from src.use_cases.health_check import run_health_checks
+from src.use_cases.inboxes_sync import sync_inboxes
 from src.infrastructure.CLI.ui import (
     build_sync_progress_screen,
     print_accounts_table,
-    print_channels_table,
     print_contacts_by_channel_table,
     print_contacts_table,
     print_health_screen,
+    print_inboxes_table,
     print_sync_screen,
 )
 
@@ -45,9 +47,9 @@ def _get_args() -> argparse.Namespace:
         help="Lista contactos desde MySQL (incluye canales; filtros opcionales).",
     )
     parser.add_argument(
-        "--list-channel",
+        "--list-inboxes",
         action="store_true",
-        help="Lista canales/inboxes desde MySQL.",
+        help="Lista inboxes desde MySQL.",
     )
     parser.add_argument(
         "--list-accounts",
@@ -89,13 +91,13 @@ def main() -> None:
         [
             bool(args.sync),
             bool(args.list_contacts),
-            bool(args.list_channel),
             bool(args.list_contacts_with_first_message),
             bool(args.list_accounts),
+            bool(args.list_inboxes),
         ]
     ) > 1:
         print(
-            "Error: usa solo una opcion: --sync, --list-contacts, --list-channel o "
+            "Error: usa solo una opcion: --sync, --list-contacts, --list-inboxes, "
             "--list-contacts-with-first-message o --list-accounts."
         )
         sys.exit(1)
@@ -148,7 +150,7 @@ def main() -> None:
             conn.close()
         return
 
-    if args.list_channel:
+    if args.list_inboxes:
         try:
             mysql_config = MySQLConfig(
                 host=_require_env("MYSQL_HOST"),
@@ -158,15 +160,15 @@ def main() -> None:
                 port=int(get_env("MYSQL_PORT", "3306")),
             )
         except Exception as exc:  # noqa: BLE001
-            print(f"Listar canales fallo: {exc}")
+            print(f"Listar inboxes fallo: {exc}")
             sys.exit(1)
 
         conn = get_mysql_connection(mysql_config)
-        repo = ContactsRepository(conn)
+        repo = InboxesRepository(conn)
         try:
             repo.ensure_table()
-            channels = repo.list_channels()
-            print_channels_table(channels)
+            inboxes = repo.list_inboxes()
+            print_inboxes_table(inboxes)
         finally:
             conn.close()
         return
@@ -223,6 +225,7 @@ def main() -> None:
             raise SystemExit("Fallo la conexion a MySQL.") from exc
         repo = ContactsRepository(conn)
         accounts_repo = AccountsRepository(conn)
+        inboxes_repo = InboxesRepository(conn)
         started_at = datetime.now()
         progress_logger = logger if args.debug else get_logger("cli", level="WARNING")
 
@@ -247,6 +250,7 @@ def main() -> None:
                 progress=_progress,
             )
         sync_account(client, accounts_repo, logger=progress_logger)
+        sync_inboxes(client, inboxes_repo, logger=progress_logger)
         total_in_db = repo.count_contacts()
         conn.close()
         print_sync_screen(stats, total_in_db=total_in_db, started_at=started_at)

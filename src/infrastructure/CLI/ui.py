@@ -110,17 +110,20 @@ def print_contacts_by_channel_table(contacts) -> None:
     _render_footer(console, width)
 
 
-def print_channels_table(channels) -> None:
+def print_inboxes_table(inboxes) -> None:
     console = Console()
     columns = [
-        ("inbox_id", 8),
-        ("inbox_name", 22),
-        ("provider", 14),
+        ("id", 6),
+        ("name", 18),
         ("channel_type", 18),
-        ("contacts", 9),
+        ("provider", 14),
+        ("channel_id", 10),
+        ("phone_number", 16),
+        ("email", 20),
+        ("website_token", 12),
     ]
     width = _compute_width(columns)
-    _render_header(console, width, "CANALES", "MYSQL")
+    _render_header(console, width, "INBOXES", "MYSQL")
     table = Table(
         box=box.ASCII,
         show_header=True,
@@ -140,10 +143,10 @@ def print_channels_table(channels) -> None:
     for col in table.columns:
         col.style = "green"
     table.columns[0].style = "bold green"
-    for channel in channels:
+    for inbox in inboxes:
         row = []
         for key, col_width in columns:
-            raw = channel.get(key)
+            raw = inbox.get(key)
             value = "" if raw is None else str(raw)
             value = _clean_cell(value)
             row.append(_truncate(value, col_width))

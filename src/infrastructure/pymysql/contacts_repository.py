@@ -197,23 +197,6 @@ class ContactsRepository:
             cursor.execute(sql, params)
             return list(cursor.fetchall() or [])
 
-    def list_channels(self) -> list[Dict[str, Any]]:
-        with self.connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT
-                    inbox_id,
-                    inbox_name,
-                    channel_type,
-                    provider,
-                    COUNT(DISTINCT contact_id) AS contacts
-                FROM contact_inboxes
-                GROUP BY inbox_id, inbox_name, channel_type, provider
-                ORDER BY contacts DESC, inbox_id ASC
-                """
-            )
-            return list(cursor.fetchall() or [])
-
     def count_contacts(self) -> int:
         with self.connection.cursor() as cursor:
             cursor.execute("SELECT COUNT(*) AS total FROM contacts")
