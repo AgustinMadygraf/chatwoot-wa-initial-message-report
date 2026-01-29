@@ -65,6 +65,51 @@ def print_contacts_table(contacts, include_first_message: bool = False) -> None:
     _render_footer(console, width)
 
 
+def print_contacts_by_channel_table(contacts) -> None:
+    console = Console()
+    columns = [
+        ("id", 6),
+        ("name", 12),
+        ("phone_number", 14),
+        ("inbox_name", 14),
+        ("provider", 10),
+        ("channel_type", 12),
+        ("created_at", 19),
+        ("last_activity_at", 19),
+    ]
+    width = _compute_width(columns)
+    _render_header(console, width, "CONTACTOS POR CANAL", "MYSQL")
+    table = Table(
+        box=box.ASCII,
+        show_header=True,
+        header_style="bold yellow",
+        row_styles=["", ""],
+    )
+    for label, col_width in columns:
+        table.add_column(
+            label.upper(),
+            width=col_width,
+            min_width=col_width,
+            max_width=col_width,
+            overflow="ellipsis",
+            no_wrap=True,
+            style="green",
+        )
+    for col in table.columns:
+        col.style = "green"
+    table.columns[0].style = "bold green"
+    for contact in contacts:
+        row = []
+        for key, col_width in columns:
+            raw = contact.get(key)
+            value = _format_datetime_cell(key, raw)
+            value = _clean_cell(value)
+            row.append(_truncate(value, col_width))
+        table.add_row(*row)
+    console.print(table)
+    _render_footer(console, width)
+
+
 def print_health_screen(results: dict) -> None:
     console = Console()
     columns = [

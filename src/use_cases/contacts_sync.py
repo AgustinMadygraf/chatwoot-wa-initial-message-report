@@ -51,6 +51,9 @@ def sync_contacts(
                     stats["total_skipped"] += 1
                     continue
             repo.upsert_contact(contact)
+            repo.replace_contact_inboxes(
+                int(contact_id), contact.get("contact_inboxes") or []
+            )
             stats["total_upserted"] += 1
 
         if progress:
