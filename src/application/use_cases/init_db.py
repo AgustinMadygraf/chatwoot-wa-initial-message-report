@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from application.ports.mysql_admin import MySQLAdminPort
 from entities.mysql_config import MySQLConfig
-from interface_adapter.gateways.mysql_admin_gateway import MySQLAdminGateway
 from shared.logger import Logger, get_logger
 
 
@@ -15,14 +15,14 @@ class InitDbResult:
 
 def run_init_db(
     config: MySQLConfig,
-    gateway: MySQLAdminGateway,
+    admin: MySQLAdminPort,
     logger: Logger | None = None,
 ) -> InitDbResult:
     logger = logger or get_logger("init-db")
     logger.info("Inicializando base de datos MySQL...")
     try:
-        gateway.create_database(config)
-        gateway.check_connection(config)
+        admin.create_database(config)
+        admin.check_connection(config)
     except Exception as exc:  # noqa: BLE001
         logger.error(f"Init DB fallo: {exc}")
         return InitDbResult(ok=False, error=str(exc))

@@ -16,4 +16,5 @@ __all__ = [
     "InboxesRepositoryPort",
     "MessagesRepositoryPort",
     "UnitOfWorkPort",
+    "MySQLAdminPort",
 ]

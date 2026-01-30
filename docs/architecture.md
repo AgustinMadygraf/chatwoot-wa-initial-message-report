@@ -48,3 +48,14 @@ src/
     CLI/
   shared/
 ```
+
+## Diagrama Mermaid sugerido
+```mermaid
+flowchart LR
+  CLI["CLI/TUI (Live)"]
+  CLI -->|usa| AppUseCases["Application Use Cases"]
+  AppUseCases -->|define| Domain["Domain (Chatwoot models)"]
+  AppUseCases -->|depende de| Ports["Ports (ChatwootClientPort / Repos / UoW / Health)"]
+  Ports -->|implementa| Infrastructure["Infrastructure (PyMySQL, Chatwoot API, Health)"]
+  Ports -->|orquesta| UnitOfWork("UnitOfWorkPort")
+```

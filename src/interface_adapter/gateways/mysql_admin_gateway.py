@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from application.ports.mysql_admin import MySQLAdminPort
 from entities.mysql_config import MySQLConfig
 
 
-class MySQLAdminGateway(Protocol):
+class MySQLAdminGateway(MySQLAdminPort, Protocol):
     def create_database(self, config: MySQLConfig) -> None:
         """Create database if not exists."""
 
