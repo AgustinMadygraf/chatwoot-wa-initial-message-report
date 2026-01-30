@@ -63,6 +63,11 @@ def _get_args() -> argparse.Namespace:
         help="Sincroniza cuentas, inboxes, conversaciones y mensajes.",
     )
     parser.add_argument(
+        "--sync-messages",
+        action="store_true",
+        help="Sincroniza solo mensajes usando conversaciones ya guardadas en MySQL.",
+    )
+    parser.add_argument(
         "--list-inboxes",
         action="store_true",
         help="Lista inboxes desde MySQL.",
@@ -229,6 +234,53 @@ def _handle_sync(args, logger) -> None:
                 print(f"\nSync fallo: {exc}")
     print_sync_screen(sync_stats, started_at=started_at)
 
+def _handle_sync_messages_only(args, logger) -> None:
+    chatwoot_config = ChatwootClientConfig(
+        base_url=_require_env("CHATWOOT_BASE_URL"),
+        account_id=_require_env("CHATWOOT_ACCOUNT_ID"),
+        api_token=_require_env("CHATWOOT_API_ACCESS_TOKEN"),
+    )
+    mysql_config = MySQLConfig(
+        host=_require_env("MYSQL_HOST"),
+        user=_require_env("MYSQL_USER"),
+        password=_require_env("MYSQL_PASSWORD"),
+        database=_require_env("MYSQL_DB"),
+        port=int(get_env("MYSQL_PORT", "3306")),
+    )
+    client = ChatwootClient(chatwoot_config, logger=logger if args.debug else None)
+    started_at = datetime.now()
+    progress_logger = logger if args.debug else get_logger("cli", level="WARNING")
+    sync_stats: dict[str, object] = {"phase": "mensajes"}
+
+    with PyMySQLUnitOfWork(mysql_config) as uow:
+        conversations_repo = ConversationsRepository(uow.connection)
+        messages_repo = MessagesRepository(uow.connection)
+        conversations_repo.ensure_table()
+        messages_repo.ensure_table()
+        rows = conversations_repo.list_conversations()
+        conversation_ids = [int(row["id"]) for row in rows if row.get("id") is not None]
+        if not conversation_ids:
+            sync_stats["phase"] = "sin_conversaciones"
+            print_sync_screen(sync_stats, started_at=started_at)
+            print("No hay conversaciones en MySQL. Ejecuta --sync primero.")
+            return
+
+        def _msg_progress(conversation_id: int, total: int, errors: int) -> None:
+            sync_stats["messages_conversation_id"] = conversation_id
+            sync_stats["messages_upserted"] = total
+            sync_stats["messages_errors"] = errors
+            print_sync_screen(sync_stats, started_at=started_at)
+
+        sync_messages(
+            client,
+            messages_repo,
+            conversation_ids,
+            logger=progress_logger,
+            per_page=args.per_page,
+            progress=_msg_progress,
+        )
+    print_sync_screen(sync_stats, started_at=started_at)
+
 
 def main() -> None:
     "Punto de entrada para la aplicacion CLI."
@@ -266,6 +318,7 @@ def main() -> None:
         sum(
             [
                 bool(args.sync),
+                bool(args.sync_messages),
                 bool(args.list_accounts),
                 bool(args.list_inboxes),
                 bool(args.list_conversations),
@@ -275,8 +328,8 @@ def main() -> None:
         > 1
     ):
         print(
-            "Error: usa solo una opcion: --sync, --list-inboxes, --list-accounts, "
-            "--list-conversations o --list-messages."
+            "Error: usa solo una opcion: --sync, --sync-messages, --list-inboxes, "
+            "--list-accounts, --list-conversations o --list-messages."
         )
         sys.exit(1)
 
@@ -321,6 +374,13 @@ def main() -> None:
             _handle_sync(args, logger)
         except (ValueError, RuntimeError, KeyboardInterrupt) as exc:
             print(f"Sync fallo: {exc}")
+            sys.exit(1)
+        return
+    if args.sync_messages:
+        try:
+            _handle_sync_messages_only(args, logger)
+        except (ValueError, RuntimeError, KeyboardInterrupt) as exc:
+            print(f"Sync mensajes fallo: {exc}")
             sys.exit(1)
         return
 

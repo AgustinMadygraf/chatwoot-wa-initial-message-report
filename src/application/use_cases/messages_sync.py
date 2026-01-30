@@ -34,8 +34,15 @@ def sync_messages(
     total = 0
     errors = 0
     for convo_id in conversation_ids:
+        logger.debug("Mensajes: inicio conversacion", conversation_id=convo_id)
         page = 1
         while True:
+            logger.debug(
+                "Mensajes: consultando pagina",
+                conversation_id=convo_id,
+                page=page,
+                per_page=per_page,
+            )
             try:
                 payload = client.list_conversation_messages(
                     conversation_id=convo_id, page=page, per_page=per_page
@@ -51,17 +58,40 @@ def sync_messages(
                 )
                 break
             items = list(_extract_messages(payload))
+            logger.debug(
+                "Mensajes: pagina recibida",
+                conversation_id=convo_id,
+                page=page,
+                count=len(items),
+            )
             if not items:
+                logger.debug(
+                    "Mensajes: sin items, fin conversacion",
+                    conversation_id=convo_id,
+                    page=page,
+                )
                 break
             for message in items:
                 model = Message.from_payload(message)
                 repo.upsert_message(model.to_record())
                 total += 1
+                logger.debug(
+                    "Mensajes: upsert",
+                    conversation_id=convo_id,
+                    message_id=model.id,
+                    total=total,
+                )
             if progress:
                 progress(convo_id, total, errors)
             page += 1
         if progress:
             progress(convo_id, total, errors)
+        logger.debug(
+            "Mensajes: fin conversacion",
+            conversation_id=convo_id,
+            total=total,
+            errors=errors,
+        )
 
     logger.info(f"Mensajes sincronizados: {total}")
     return {"total_upserted": total, "total_errors": errors}
