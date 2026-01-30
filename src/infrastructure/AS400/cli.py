@@ -128,22 +128,22 @@ def _handle_health(logger) -> None:
     print_health_screen(results)
 
 
-def _handle_list_inboxes() -> None:
+def handle_list_inboxes() -> None:
     inboxes = fetch_inboxes(int(_require_env("CHATWOOT_ACCOUNT_ID")))
     print_inboxes_table(inboxes)
 
 
-def _handle_list_conversations() -> None:
+def handle_list_conversations() -> None:
     conversations = fetch_conversations()
     print_conversations_table(conversations)
 
 
-def _handle_list_messages() -> None:
+def handle_list_messages() -> None:
     messages = fetch_messages()
     print_messages_table(messages)
 
 
-def _handle_list_accounts() -> None:
+def handle_list_accounts() -> None:
     accounts = fetch_accounts()
     print_accounts_table(accounts)
 
@@ -308,13 +308,13 @@ def main() -> None:
                 if choice == "1":
                     _handle_health(logger)
                 elif choice == "2":
-                    _handle_list_accounts()
+                    handle_list_accounts()
                 elif choice == "3":
-                    _handle_list_inboxes()
+                    handle_list_inboxes()
                 elif choice == "4":
-                    _handle_list_conversations()
+                    handle_list_conversations()
                 elif choice == "5":
-                    _handle_list_messages()
+                    handle_list_messages()
                 elif choice == "6":
                     args = argparse.Namespace(debug=False, per_page=None)
                     _handle_sync(args, logger)
@@ -352,7 +352,7 @@ def main() -> None:
 
     if args.list_inboxes:
         try:
-            _handle_list_inboxes()
+            handle_list_inboxes()
         except (ValueError, RuntimeError) as exc:
             print(f"Listar inboxes fallo: {exc}")
             sys.exit(1)
@@ -360,7 +360,7 @@ def main() -> None:
 
     if args.list_conversations:
         try:
-            _handle_list_conversations()
+            handle_list_conversations()
         except (ValueError, RuntimeError) as exc:
             print(f"Listar conversaciones fallo: {exc}")
             sys.exit(1)
@@ -368,7 +368,7 @@ def main() -> None:
 
     if args.list_messages:
         try:
-            _handle_list_messages()
+            handle_list_messages()
         except (ValueError, RuntimeError) as exc:
             print(f"Listar mensajes fallo: {exc}")
             sys.exit(1)
@@ -376,7 +376,7 @@ def main() -> None:
 
     if args.list_accounts:
         try:
-            _handle_list_accounts()
+            handle_list_accounts()
         except (ValueError, RuntimeError) as exc:
             print(f"Listar cuentas fallo: {exc}")
             sys.exit(1)

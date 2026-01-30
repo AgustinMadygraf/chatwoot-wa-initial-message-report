@@ -99,18 +99,22 @@ class Message:
     message_type: int | None
     sender_type: str | None
     sender_id: int | None
+    sender_role: str | None
     content: str | None
     created_at: int | None
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "Message":
+        sender_type = _as_str(payload.get("sender_type"))
+        message_type = _as_int(payload.get("message_type"))
         return cls(
             id=_as_int(payload.get("id")),
             conversation_id=_as_int(payload.get("conversation_id")),
             inbox_id=_as_int(payload.get("inbox_id")),
-            message_type=_as_int(payload.get("message_type")),
-            sender_type=_as_str(payload.get("sender_type")),
+            message_type=message_type,
+            sender_type=sender_type,
             sender_id=_as_int(payload.get("sender_id")),
+            sender_role=_derive_sender_role(sender_type, message_type),
             content=_as_str(payload.get("content")),
             created_at=_as_int(payload.get("created_at")),
         )
@@ -123,6 +127,7 @@ class Message:
             "message_type": self.message_type,
             "sender_type": self.sender_type,
             "sender_id": self.sender_id,
+            "sender_role": self.sender_role,
             "content": self.content,
             "created_at": self.created_at,
         }
@@ -153,4 +158,18 @@ def _pick_address(payload: dict[str, Any]) -> str | None:
         website_url = payload.get("website_url")
         if isinstance(website_url, str) and website_url.strip():
             return website_url.strip()
+    return None
+
+
+def _derive_sender_role(sender_type: str | None, message_type: int | None) -> str | None:
+    if sender_type:
+        lowered = sender_type.lower()
+        if lowered == "user":
+            return "agent"
+        if lowered == "contact":
+            return "contact"
+    if message_type == 1:
+        return "agent"
+    if message_type == 0:
+        return "contact"
     return None

@@ -124,6 +124,14 @@ def sync_messages(
             last_page_ids = page_ids
             for message in items:
                 model = Message.from_payload(message)
+                if model.message_type not in (0, 1):
+                    logger.debug(
+                        "Mensajes: omitido por message_type",
+                        conversation_id=convo_id,
+                        message_id=model.id,
+                        message_type=model.message_type,
+                    )
+                    continue
                 repo.upsert_message(model.to_record())
                 total += 1
             logger.debug(

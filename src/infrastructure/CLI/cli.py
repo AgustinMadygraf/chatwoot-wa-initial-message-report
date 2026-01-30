@@ -13,12 +13,6 @@ from entities.mysql_config import MySQLConfig
 from infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
 from infrastructure.pymysql.accounts_repository import AccountsRepository
 from infrastructure.pymysql.conversations_repository import ConversationsRepository
-from infrastructure.pymysql.fetchers import (
-    fetch_accounts,
-    fetch_conversations,
-    fetch_inboxes,
-    fetch_messages,
-)
 from infrastructure.pymysql.inboxes_repository import InboxesRepository
 from infrastructure.pymysql.messages_repository import MessagesRepository
 from infrastructure.pymysql.unit_of_work import PyMySQLUnitOfWork
@@ -29,7 +23,7 @@ from shared.logger import get_logger
 from application.use_cases.accounts_sync import sync_account
 from application.use_cases.conversations_sync import sync_conversations
 from application.use_cases.health_check import run_health_checks
-from application.ports.health_check import HealthCheckResults, HealthServiceStatus
+from application.ports.health_check import HealthServiceStatus
 from application.use_cases.inboxes_sync import sync_inboxes
 from application.use_cases.messages_sync import sync_messages
 
@@ -50,6 +44,17 @@ def _get_args() -> argparse.Namespace:
         "--sync-messages",
         action="store_true",
         help="Sincroniza solo mensajes usando conversaciones ya guardadas en MySQL.",
+    )
+    parser.add_argument(
+        "--test",
+        nargs="?",
+        type=int,
+        const=-1,
+        default=None,
+        help=(
+            "Modo debug para --sync-messages: limita a 1 conversacion. "
+            "Si pasas un ID, usa esa conversacion."
+        ),
     )
     parser.add_argument(
         "--list-inboxes",
@@ -148,8 +153,6 @@ def _handle_sync_plain(args, logger) -> None:
         except KeyboardInterrupt:
             print("Sync cancelado por el usuario.")
             return
-        except (ValueError, RuntimeError):
-            raise
     finished_at = datetime.now()
     print("Fin sync:", finished_at.isoformat(timespec="seconds"))
     print("Duracion:", finished_at - started_at)
@@ -190,6 +193,14 @@ def _handle_sync_messages_only(args, logger) -> None:
         if not conversation_ids:
             print("No hay conversaciones en MySQL. Ejecuta --sync primero.")
             return
+        if args.test is not None:
+            if args.test > 0:
+                if args.test not in conversation_ids:
+                    raise ValueError(f"Conversacion {args.test} no existe en MySQL.")
+                conversation_ids = [args.test]
+            else:
+                conversation_ids = [conversation_ids[0]]
+            print(f"Modo test: solo conversacion {conversation_ids[0]}")
 
         def _msg_progress(conversation_id: int, total: int, errors: int) -> None:
             # Commit per page so partial progress is persisted on long runs.
@@ -246,9 +257,13 @@ def main() -> None:
         As400App().run()
         return
 
+    if args.test is not None and not args.sync_messages:
+        print("Error: --test solo es valido junto con --sync-messages.")
+        sys.exit(1)
+
     if args.list_inboxes:
         try:
-            as400_cli._handle_list_inboxes()
+            as400_cli.handle_list_inboxes()
         except (ValueError, RuntimeError) as exc:
             print(f"Listar inboxes fallo: {exc}")
             sys.exit(1)
@@ -256,7 +271,7 @@ def main() -> None:
 
     if args.list_conversations:
         try:
-            as400_cli._handle_list_conversations()
+            as400_cli.handle_list_conversations()
         except (ValueError, RuntimeError) as exc:
             print(f"Listar conversaciones fallo: {exc}")
             sys.exit(1)
@@ -264,7 +279,7 @@ def main() -> None:
 
     if args.list_messages:
         try:
-            as400_cli._handle_list_messages()
+            as400_cli.handle_list_messages()
         except (ValueError, RuntimeError) as exc:
             print(f"Listar mensajes fallo: {exc}")
             sys.exit(1)
@@ -272,7 +287,7 @@ def main() -> None:
 
     if args.list_accounts:
         try:
-            as400_cli._handle_list_accounts()
+            as400_cli.handle_list_accounts()
         except (ValueError, RuntimeError) as exc:
             print(f"Listar cuentas fallo: {exc}")
             sys.exit(1)

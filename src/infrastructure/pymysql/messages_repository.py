@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
     id BIGINT PRIMARY KEY,
     conversation_id BIGINT,
     inbox_id BIGINT,
+    sender_role VARCHAR(16),
     content TEXT,
     created_at BIGINT,
     last_synced_at DATETIME,
@@ -24,6 +25,7 @@ BASE_COLUMNS = {
     "id",
     "conversation_id",
     "inbox_id",
+    "sender_role",
     "content",
     "created_at",
     "last_synced_at",
@@ -39,6 +41,7 @@ class MessagesRepository:
             cursor.execute(CREATE_MESSAGES_TABLE_SQL)
             cursor.execute(f"ALTER TABLE {TABLE_NAME} ROW_FORMAT=DYNAMIC")
             self._drop_extra_columns(cursor)
+            self._ensure_column(cursor, "sender_role", "VARCHAR(16)")
             self._ensure_index(cursor, "idx_conversation_id", "conversation_id")
             self._ensure_index(cursor, "idx_inbox_id", "inbox_id")
             self._ensure_index(cursor, "idx_conversation_created", "conversation_id, created_at")
@@ -66,6 +69,7 @@ class MessagesRepository:
                     id,
                     conversation_id,
                     inbox_id,
+                    sender_role,
                     created_at,
                     content
                 FROM {TABLE_NAME}
@@ -103,6 +107,18 @@ class MessagesRepository:
             except Exception:  # noqa: BLE001
                 pass
 
+    def _ensure_column(self, cursor, name: str, column_type: str) -> None:
+        try:
+            cursor.execute(f"SHOW COLUMNS FROM {TABLE_NAME} LIKE %s", (name,))
+            if cursor.fetchone():
+                return
+        except Exception:  # noqa: BLE001
+            return
+        try:
+            cursor.execute(f"ALTER TABLE {TABLE_NAME} ADD COLUMN {name} {column_type}")
+        except Exception:  # noqa: BLE001
+            pass
+
     def _ensure_index(self, cursor, name: str, column: str) -> None:
         try:
             cursor.execute(f"CREATE INDEX {name} ON {TABLE_NAME} ({column})")
@@ -133,6 +149,7 @@ def _flatten_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "id": payload.get("id"),
         "conversation_id": payload.get("conversation_id"),
         "inbox_id": payload.get("inbox_id"),
+        "sender_role": payload.get("sender_role"),
         "content": payload.get("content"),
         "created_at": payload.get("created_at"),
         "last_synced_at": now,
