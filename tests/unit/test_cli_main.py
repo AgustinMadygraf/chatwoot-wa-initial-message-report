@@ -50,6 +50,31 @@ class FakeConn:
     def close(self) -> None:
         return None
 
+    def commit(self) -> None:
+        return None
+
+    def rollback(self) -> None:
+        return None
+
+
+class _FakeUow:
+    def __init__(self) -> None:
+        self.connection = FakeConn()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+
+class _FailingUow:
+    def __enter__(self):
+        raise RuntimeError("boom")
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
 
 def _set_env(monkeypatch) -> None:
     monkeypatch.setenv("CHATWOOT_BASE_URL", "https://chatwoot.local")
@@ -63,7 +88,7 @@ def _set_env(monkeypatch) -> None:
 
 
 def test_cli_health_screen(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(cli, "run_health_checks", lambda logger=None: {"ok": True})
+    monkeypatch.setattr(cli, "run_health_checks", lambda *_args, **_kwargs: {"ok": True})
     monkeypatch.setattr(cli, "print_health_screen", lambda results: print("HEALTH"))
     monkeypatch.setattr(sys, "argv", ["run_cli.py"])
     choices = iter(["1", "0"])
@@ -76,7 +101,7 @@ def test_cli_json_health(monkeypatch, capsys) -> None:
     monkeypatch.setattr(
         cli,
         "run_health_checks",
-        lambda logger=None: {"ok": True, "chatwoot": {"ok": True}, "mysql": {"ok": True}},
+        lambda *_args, **_kwargs: {"ok": True, "chatwoot": {"ok": True}, "mysql": {"ok": True}},
     )
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--json"])
     cli.main()
@@ -88,7 +113,7 @@ def test_cli_list_inboxes(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--list-inboxes"])
     monkeypatch.setattr(cli, "InboxesRepository", FakeRepo)
-    monkeypatch.setattr(cli, "get_mysql_connection", lambda *_args, **_kwargs: FakeConn())
+    monkeypatch.setattr(cli, "PyMySQLUnitOfWork", lambda *_args, **_kwargs: _FakeUow())
     monkeypatch.setattr(cli, "print_inboxes_table", lambda *_args, **_kwargs: None)
     cli.main()
 
@@ -97,7 +122,7 @@ def test_cli_list_conversations(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--list-conversations"])
     monkeypatch.setattr(cli, "ConversationsRepository", FakeRepo)
-    monkeypatch.setattr(cli, "get_mysql_connection", lambda *_args, **_kwargs: FakeConn())
+    monkeypatch.setattr(cli, "PyMySQLUnitOfWork", lambda *_args, **_kwargs: _FakeUow())
     monkeypatch.setattr(cli, "print_conversations_table", lambda *_args, **_kwargs: None)
     cli.main()
 
@@ -106,7 +131,7 @@ def test_cli_list_messages(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--list-messages"])
     monkeypatch.setattr(cli, "MessagesRepository", FakeRepo)
-    monkeypatch.setattr(cli, "get_mysql_connection", lambda *_args, **_kwargs: FakeConn())
+    monkeypatch.setattr(cli, "PyMySQLUnitOfWork", lambda *_args, **_kwargs: _FakeUow())
     monkeypatch.setattr(cli, "print_messages_table", lambda *_args, **_kwargs: None)
     cli.main()
 
@@ -115,7 +140,7 @@ def test_cli_list_accounts(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--list-accounts"])
     monkeypatch.setattr(cli, "AccountsRepository", FakeRepo)
-    monkeypatch.setattr(cli, "get_mysql_connection", lambda *_args, **_kwargs: FakeConn())
+    monkeypatch.setattr(cli, "PyMySQLUnitOfWork", lambda *_args, **_kwargs: _FakeUow())
     monkeypatch.setattr(cli, "print_accounts_table", lambda *_args, **_kwargs: None)
     cli.main()
 
@@ -124,7 +149,7 @@ def test_cli_sync(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--sync"])
     monkeypatch.setattr(cli, "ChatwootClient", FakeChatwootClient)
-    monkeypatch.setattr(cli, "get_mysql_connection", lambda *_args, **_kwargs: FakeConn())
+    monkeypatch.setattr(cli, "PyMySQLUnitOfWork", lambda *_args, **_kwargs: _FakeUow())
     monkeypatch.setattr(cli, "AccountsRepository", FakeRepo)
     monkeypatch.setattr(cli, "InboxesRepository", FakeRepo)
     monkeypatch.setattr(cli, "ConversationsRepository", FakeRepo)
@@ -195,22 +220,23 @@ def test_cli_list_accounts_missing_env(monkeypatch, capsys) -> None:
     assert "Listar cuentas fallo" in capsys.readouterr().out
 
 
-def test_cli_sync_mysql_connection_error(monkeypatch) -> None:
+def test_cli_sync_mysql_connection_error(monkeypatch, capsys) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--sync"])
     monkeypatch.setattr(cli, "ChatwootClient", FakeChatwootClient)
-    monkeypatch.setattr(cli, "get_mysql_connection", lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(cli, "PyMySQLUnitOfWork", lambda *_args, **_kwargs: _FailingUow())
     try:
         cli.main()
     except SystemExit:
         pass
+    assert "Sync fallo" in capsys.readouterr().out
 
 
 def test_cli_status_non_json(monkeypatch, capsys) -> None:
     monkeypatch.setattr(
         cli,
         "run_health_checks",
-        lambda logger=None: {
+        lambda *_args, **_kwargs: {
             "ok": False,
             "chatwoot": {"ok": False, "error": "x"},
             "mysql": {"ok": True},
@@ -227,7 +253,7 @@ def test_cli_sync_keyboard_interrupt(monkeypatch, capsys) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--sync"])
     monkeypatch.setattr(cli, "ChatwootClient", FakeChatwootClient)
-    monkeypatch.setattr(cli, "get_mysql_connection", lambda *_args, **_kwargs: FakeConn())
+    monkeypatch.setattr(cli, "PyMySQLUnitOfWork", lambda *_args, **_kwargs: _FakeUow())
     monkeypatch.setattr(cli, "AccountsRepository", FakeRepo)
     monkeypatch.setattr(cli, "InboxesRepository", FakeRepo)
     monkeypatch.setattr(cli, "ConversationsRepository", FakeRepo)
@@ -248,7 +274,7 @@ def test_cli_sync_exception(monkeypatch, capsys) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--sync"])
     monkeypatch.setattr(cli, "ChatwootClient", FakeChatwootClient)
-    monkeypatch.setattr(cli, "get_mysql_connection", lambda *_args, **_kwargs: FakeConn())
+    monkeypatch.setattr(cli, "PyMySQLUnitOfWork", lambda *_args, **_kwargs: _FakeUow())
     monkeypatch.setattr(cli, "AccountsRepository", FakeRepo)
     monkeypatch.setattr(cli, "InboxesRepository", FakeRepo)
     monkeypatch.setattr(cli, "ConversationsRepository", FakeRepo)

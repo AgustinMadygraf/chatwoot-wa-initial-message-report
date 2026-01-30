@@ -12,6 +12,7 @@
 - UI/UX tipo AS/400 debe vivir como adaptador externo (CLI/TUI) sin contaminar dominio.
 - Sin argumentos, la CLI muestra menu AS/400 interactivo.
 - La UI ajusta ancho/alto automaticamente segun terminal y pagina con F8/F9 (N/P).
+ - Infra MySQL unificada en `src/infrastructure/pymysql` (sin carpeta `mysql`).
 
 ## Variables de entorno esperadas
 - `CHATWOOT_BASE_URL`
@@ -32,6 +33,7 @@
 - DDD: entidades, value objects, agregados, repositorios (interfaces), domain events si aplica.
 - Patrones: Repository, Unit of Work, Adapter, Factory, Strategy (cuando haya variaciones).
 - Errores: usar tipos propios en dominio/aplicacion; mapear a mensajes en adapters.
+- Unit of Work obligatorio para operaciones MySQL.
 
 ## Calidad y tooling (target)
 - Python 3.10.11, type hints completos, dataclasses donde aplique.

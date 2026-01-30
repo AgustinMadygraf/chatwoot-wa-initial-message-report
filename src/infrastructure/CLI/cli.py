@@ -25,10 +25,10 @@ from infrastructure.CLI.ui import (
     print_sync_screen,
 )
 from infrastructure.pymysql.accounts_repository import AccountsRepository
-from infrastructure.pymysql.connection import get_mysql_connection
 from infrastructure.pymysql.conversations_repository import ConversationsRepository
 from infrastructure.pymysql.inboxes_repository import InboxesRepository
 from infrastructure.pymysql.messages_repository import MessagesRepository
+from infrastructure.pymysql.unit_of_work import PyMySQLUnitOfWork
 from shared.config import get_env, load_env_file
 from shared.logger import get_logger
 from application.use_cases.accounts_sync import sync_account
@@ -36,6 +36,7 @@ from application.use_cases.conversations_sync import sync_conversations
 from application.use_cases.health_check import run_health_checks
 from application.use_cases.inboxes_sync import sync_inboxes
 from application.use_cases.messages_sync import sync_messages
+from infrastructure.health_check import EnvironmentHealthCheck
 
 
 def _get_args() -> argparse.Namespace:
@@ -93,7 +94,8 @@ def _show_menu() -> str:
 
 
 def _handle_health(logger) -> None:
-    results = run_health_checks(logger=logger)
+    checker = EnvironmentHealthCheck(logger=logger)
+    results = run_health_checks(checker, logger=logger)
     print_health_screen(results)
 
 
@@ -105,14 +107,11 @@ def _handle_list_inboxes() -> None:
         database=_require_env("MYSQL_DB"),
         port=int(get_env("MYSQL_PORT", "3306")),
     )
-    conn = get_mysql_connection(mysql_config)
-    repo = InboxesRepository(conn, account_id=int(_require_env("CHATWOOT_ACCOUNT_ID")))
-    try:
+    with PyMySQLUnitOfWork(mysql_config) as uow:
+        repo = InboxesRepository(uow.connection, account_id=int(_require_env("CHATWOOT_ACCOUNT_ID")))
         repo.ensure_table()
         inboxes = repo.list_inboxes()
         print_inboxes_table(inboxes)
-    finally:
-        conn.close()
 
 
 def _handle_list_conversations() -> None:
@@ -123,14 +122,11 @@ def _handle_list_conversations() -> None:
         database=_require_env("MYSQL_DB"),
         port=int(get_env("MYSQL_PORT", "3306")),
     )
-    conn = get_mysql_connection(mysql_config)
-    repo = ConversationsRepository(conn)
-    try:
+    with PyMySQLUnitOfWork(mysql_config) as uow:
+        repo = ConversationsRepository(uow.connection)
         repo.ensure_table()
         conversations = repo.list_conversations()
         print_conversations_table(conversations)
-    finally:
-        conn.close()
 
 
 def _handle_list_messages() -> None:
@@ -141,14 +137,11 @@ def _handle_list_messages() -> None:
         database=_require_env("MYSQL_DB"),
         port=int(get_env("MYSQL_PORT", "3306")),
     )
-    conn = get_mysql_connection(mysql_config)
-    repo = MessagesRepository(conn)
-    try:
+    with PyMySQLUnitOfWork(mysql_config) as uow:
+        repo = MessagesRepository(uow.connection)
         repo.ensure_table()
         messages = repo.list_messages()
         print_messages_table(messages)
-    finally:
-        conn.close()
 
 
 def _handle_list_accounts() -> None:
@@ -159,14 +152,11 @@ def _handle_list_accounts() -> None:
         database=_require_env("MYSQL_DB"),
         port=int(get_env("MYSQL_PORT", "3306")),
     )
-    conn = get_mysql_connection(mysql_config)
-    repo = AccountsRepository(conn)
-    try:
+    with PyMySQLUnitOfWork(mysql_config) as uow:
+        repo = AccountsRepository(uow.connection)
         repo.ensure_table()
         accounts = repo.list_accounts()
         print_accounts_table(accounts)
-    finally:
-        conn.close()
 
 
 def _handle_sync(args, logger) -> None:
@@ -183,82 +173,76 @@ def _handle_sync(args, logger) -> None:
         port=int(get_env("MYSQL_PORT", "3306")),
     )
     client = ChatwootClient(chatwoot_config, logger=logger if args.debug else None)
-    try:
-        conn = get_mysql_connection(mysql_config)
-    except Exception as exc:  # noqa: BLE001
-        logger.error(
-            "No se pudo conectar a MySQL. Verifica MYSQL_HOST, MYSQL_USER, "
-            "MYSQL_PASSWORD, MYSQL_DB y MYSQL_PORT."
-        )
-        raise SystemExit("Fallo la conexion a MySQL.") from exc
-    accounts_repo = AccountsRepository(conn)
-    inboxes_repo = InboxesRepository(conn, account_id=int(_require_env("CHATWOOT_ACCOUNT_ID")))
-    conversations_repo = ConversationsRepository(conn)
-    messages_repo = MessagesRepository(conn)
     started_at = datetime.now()
     progress_logger = logger if args.debug else get_logger("cli", level="WARNING")
-
     sync_stats: dict[str, object] = {"phase": "accounts"}
 
-    def _update_live() -> None:
-        live.update(build_sync_progress_screen(sync_stats, started_at=started_at))
+    with PyMySQLUnitOfWork(mysql_config) as uow:
+        accounts_repo = AccountsRepository(uow.connection)
+        inboxes_repo = InboxesRepository(
+            uow.connection, account_id=int(_require_env("CHATWOOT_ACCOUNT_ID"))
+        )
+        conversations_repo = ConversationsRepository(uow.connection)
+        messages_repo = MessagesRepository(uow.connection)
 
-    with Live(
-        build_sync_progress_screen(sync_stats, started_at=started_at),
-        refresh_per_second=4,
-    ) as live:
-        try:
-            sync_stats["accounts_upserted"] = sync_account(
-                client, accounts_repo, logger=progress_logger
-            ).get("total_upserted", 0)
-            _update_live()
-            sync_stats["phase"] = "inboxes"
-            _update_live()
-            sync_stats["inboxes_upserted"] = sync_inboxes(
-                client, inboxes_repo, logger=progress_logger
-            ).get("total_upserted", 0)
-            _update_live()
-            sync_stats["phase"] = "conversaciones"
-            _update_live()
+        def _update_live() -> None:
+            live.update(build_sync_progress_screen(sync_stats, started_at=started_at))
 
-            def _convo_progress(page: int, total: int) -> None:
-                sync_stats["conversations_page"] = page
-                sync_stats["conversations_upserted"] = total
+        with Live(
+            build_sync_progress_screen(sync_stats, started_at=started_at),
+            refresh_per_second=4,
+        ) as live:
+            try:
+                sync_stats["accounts_upserted"] = sync_account(
+                    client, accounts_repo, logger=progress_logger
+                ).get("total_upserted", 0)
+                _update_live()
+                sync_stats["phase"] = "inboxes"
+                _update_live()
+                sync_stats["inboxes_upserted"] = sync_inboxes(
+                    client, inboxes_repo, logger=progress_logger
+                ).get("total_upserted", 0)
+                _update_live()
+                sync_stats["phase"] = "conversaciones"
                 _update_live()
 
-            conversation_ids = sync_conversations(
-                client,
-                conversations_repo,
-                logger=progress_logger,
-                per_page=args.per_page,
-                progress=_convo_progress,
-            )
-            sync_stats["phase"] = "mensajes"
-            _update_live()
+                def _convo_progress(page: int, total: int) -> None:
+                    sync_stats["conversations_page"] = page
+                    sync_stats["conversations_upserted"] = total
+                    _update_live()
 
-            def _msg_progress(conversation_id: int, total: int, errors: int) -> None:
-                sync_stats["messages_conversation_id"] = conversation_id
-                sync_stats["messages_upserted"] = total
-                sync_stats["messages_errors"] = errors
+                conversation_ids = sync_conversations(
+                    client,
+                    conversations_repo,
+                    logger=progress_logger,
+                    per_page=args.per_page,
+                    progress=_convo_progress,
+                )
+                sync_stats["phase"] = "mensajes"
                 _update_live()
 
-            sync_messages(
-                client,
-                messages_repo,
-                conversation_ids,
-                logger=progress_logger,
-                per_page=args.per_page,
-                progress=_msg_progress,
-            )
-        except KeyboardInterrupt:
-            sync_stats["phase"] = "cancelado"
-            _update_live()
-            print("\nSync cancelado por el usuario.")
-        except Exception as exc:  # noqa: BLE001
-            sync_stats["phase"] = "error"
-            _update_live()
-            print(f"\nSync fallo: {exc}")
-    conn.close()
+                def _msg_progress(conversation_id: int, total: int, errors: int) -> None:
+                    sync_stats["messages_conversation_id"] = conversation_id
+                    sync_stats["messages_upserted"] = total
+                    sync_stats["messages_errors"] = errors
+                    _update_live()
+
+                sync_messages(
+                    client,
+                    messages_repo,
+                    conversation_ids,
+                    logger=progress_logger,
+                    per_page=args.per_page,
+                    progress=_msg_progress,
+                )
+            except KeyboardInterrupt:
+                sync_stats["phase"] = "cancelado"
+                _update_live()
+                print("\nSync cancelado por el usuario.")
+            except Exception as exc:  # noqa: BLE001
+                sync_stats["phase"] = "error"
+                _update_live()
+                print(f"\nSync fallo: {exc}")
     print_sync_screen(sync_stats, started_at=started_at)
 
 
@@ -351,7 +335,8 @@ def main() -> None:
             sys.exit(1)
         return
 
-    results = run_health_checks(logger=logger)
+    checker = EnvironmentHealthCheck(logger=logger)
+    results = run_health_checks(checker, logger=logger)
     if args.json:
         print(json.dumps(results, ensure_ascii=False, indent=2))
         return

@@ -13,7 +13,7 @@ def get_mysql_connection(config: MySQLConfig) -> pymysql.connections.Connection:
         database=config.database,
         port=config.port,
         charset="utf8mb4",
-        autocommit=True,
+        autocommit=False,
         cursorclass=pymysql.cursors.DictCursor,
         connect_timeout=config.connect_timeout,
     )

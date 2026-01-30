@@ -26,3 +26,22 @@ Implications
 - UI lives in `src/infrastructure/CLI` (or `src/infrastructure/tui`).
 - All UI logic depends on adapters/controllers; no domain or use case imports in UI except through adapters.
 - Screen layout is constrained to 24x80 with explicit keyboard mappings.
+
+## Decision: Unit of Work for MySQL
+Chosen: PyMySQL Unit of Work with commit/rollback.
+
+Rationale
+- Mantener consistencia transaccional y aislar detalles de DB.
+
+Implications
+- `PyMySQLUnitOfWork` maneja commit/rollback.
+- Repositorios reciben `connection` desde UoW.
+
+## Decision: Unify MySQL infrastructure
+Chosen: single `src/infrastructure/pymysql` module for all MySQL concerns.
+
+Rationale
+- Evitar duplicidad y confusion entre `mysql` y `pymysql`.
+
+Implications
+- Health checks y conexiones viven en `pymysql`.

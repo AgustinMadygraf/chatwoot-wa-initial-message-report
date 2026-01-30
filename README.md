@@ -20,9 +20,9 @@ Variables:
 ## Uso
 Activar venv:
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 ```
 
 Sincronizar:
@@ -41,6 +41,16 @@ python run_cli.py --list-messages
 Opcional:
 ```bash
 python run_cli.py --sync --per-page 50
+```
+
+Menu AS/400 (sin argumentos):
+```bash
+python run_cli.py
+```
+
+Windows shortcut:
+```bat
+run.bat --list-accounts
 
 ## Tablas en MySQL
 - `1_accounts`

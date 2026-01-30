@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-import infrastructure.mysql.connection as mysql_connection
+import infrastructure.pymysql.health as mysql_connection
 import infrastructure.pymysql.connection as pymysql_connection
+from infrastructure.pymysql.unit_of_work import PyMySQLUnitOfWork
 
 
 class FakeCursor:
@@ -27,12 +28,20 @@ class FakeConnection:
     def __init__(self) -> None:
         self.cursor_obj = FakeCursor()
         self.closed = False
+        self.committed = False
+        self.rolled_back = False
 
     def cursor(self) -> FakeCursor:
         return self.cursor_obj
 
     def close(self) -> None:
         self.closed = True
+
+    def commit(self) -> None:
+        self.committed = True
+
+    def rollback(self) -> None:
+        self.rolled_back = True
 
 
 def test_check_connection_success(monkeypatch) -> None:
@@ -68,3 +77,14 @@ def test_get_mysql_connection(monkeypatch) -> None:
     conn = pymysql_connection.get_mysql_connection(config)
     assert conn is sentinel
     assert captured["host"] == "h"
+
+
+def test_unit_of_work_commit(monkeypatch) -> None:
+    fake_conn = FakeConnection()
+    monkeypatch.setattr(
+        "infrastructure.pymysql.unit_of_work.get_mysql_connection",
+        lambda *_args, **_kwargs: fake_conn,
+    )
+    config = pymysql_connection.MySQLConfig(host="h", user="u", password="p", database="d")
+    with PyMySQLUnitOfWork(config) as uow:
+        assert uow.connection is fake_conn
