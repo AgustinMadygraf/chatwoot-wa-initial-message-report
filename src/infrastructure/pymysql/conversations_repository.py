@@ -17,7 +17,9 @@ CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
     last_activity_at BIGINT,
     last_synced_at DATETIME,
     INDEX idx_account_id (account_id),
-    INDEX idx_inbox_id (inbox_id)
+    INDEX idx_inbox_id (inbox_id),
+    INDEX idx_inbox_created (inbox_id, created_at),
+    INDEX idx_account_last_activity (account_id, last_activity_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 """
 
@@ -43,6 +45,8 @@ class ConversationsRepository:
             self._drop_extra_columns(cursor)
             self._ensure_index(cursor, "idx_account_id", "account_id")
             self._ensure_index(cursor, "idx_inbox_id", "inbox_id")
+            self._ensure_index(cursor, "idx_inbox_created", "inbox_id, created_at")
+            self._ensure_index(cursor, "idx_account_last_activity", "account_id, last_activity_at")
             self._ensure_fk(
                 cursor,
                 "fk_conversations_account",

@@ -12,7 +12,11 @@ CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
     inbox_id BIGINT,
     content TEXT,
     created_at BIGINT,
-    last_synced_at DATETIME
+    last_synced_at DATETIME,
+    INDEX idx_conversation_id (conversation_id),
+    INDEX idx_inbox_id (inbox_id),
+    INDEX idx_conversation_created (conversation_id, created_at),
+    INDEX idx_inbox_created (inbox_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 """
 
@@ -35,6 +39,24 @@ class MessagesRepository:
             cursor.execute(CREATE_MESSAGES_TABLE_SQL)
             cursor.execute(f"ALTER TABLE {TABLE_NAME} ROW_FORMAT=DYNAMIC")
             self._drop_extra_columns(cursor)
+            self._ensure_index(cursor, "idx_conversation_id", "conversation_id")
+            self._ensure_index(cursor, "idx_inbox_id", "inbox_id")
+            self._ensure_index(cursor, "idx_conversation_created", "conversation_id, created_at")
+            self._ensure_index(cursor, "idx_inbox_created", "inbox_id, created_at")
+            self._ensure_fk(
+                cursor,
+                "fk_messages_conversation",
+                "conversation_id",
+                "3_conversations",
+                "id",
+            )
+            self._ensure_fk(
+                cursor,
+                "fk_messages_inbox",
+                "inbox_id",
+                "2_inboxes",
+                "id",
+            )
 
     def list_messages(self) -> list[dict[str, Any]]:
         with self.connection.cursor() as cursor:
@@ -80,6 +102,29 @@ class MessagesRepository:
                 cursor.execute(f"ALTER TABLE {TABLE_NAME} DROP COLUMN {column}")
             except Exception:  # noqa: BLE001
                 pass
+
+    def _ensure_index(self, cursor, name: str, column: str) -> None:
+        try:
+            cursor.execute(f"CREATE INDEX {name} ON {TABLE_NAME} ({column})")
+        except Exception:  # noqa: BLE001
+            pass
+
+    def _ensure_fk(
+        self,
+        cursor,
+        name: str,
+        column: str,
+        ref_table: str,
+        ref_column: str,
+    ) -> None:
+        try:
+            cursor.execute(
+                f"ALTER TABLE {TABLE_NAME} "
+                f"ADD CONSTRAINT {name} FOREIGN KEY ({column}) "
+                f"REFERENCES {ref_table}({ref_column})"
+            )
+        except Exception:  # noqa: BLE001
+            pass
 
 
 def _flatten_payload(payload: dict[str, Any]) -> dict[str, Any]:
