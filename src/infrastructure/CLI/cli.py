@@ -26,6 +26,12 @@ from infrastructure.CLI.ui import (
 )
 from infrastructure.pymysql.accounts_repository import AccountsRepository
 from infrastructure.pymysql.conversations_repository import ConversationsRepository
+from infrastructure.pymysql.fetchers import (
+    fetch_accounts,
+    fetch_conversations,
+    fetch_inboxes,
+    fetch_messages,
+)
 from infrastructure.pymysql.inboxes_repository import InboxesRepository
 from infrastructure.pymysql.messages_repository import MessagesRepository
 from infrastructure.pymysql.unit_of_work import PyMySQLUnitOfWork
@@ -37,12 +43,14 @@ from application.use_cases.health_check import run_health_checks
 from application.use_cases.inboxes_sync import sync_inboxes
 from application.use_cases.messages_sync import sync_messages
 from infrastructure.health_check import EnvironmentHealthCheck
+from infrastructure.tui.app import As400App
 
 
 def _get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Verifica conectividad con Chatwoot API y MySQL.")
     parser.add_argument("--json", action="store_true", help="Imprime salida en JSON.")
     parser.add_argument("--debug", action="store_true", help="Habilita logs de depuracion.")
+    parser.add_argument("--tui", action="store_true", help="Inicia la interfaz AS/400 en Textual.")
     parser.add_argument(
         "--sync",
         action="store_true",
@@ -100,63 +108,23 @@ def _handle_health(logger) -> None:
 
 
 def _handle_list_inboxes() -> None:
-    mysql_config = MySQLConfig(
-        host=_require_env("MYSQL_HOST"),
-        user=_require_env("MYSQL_USER"),
-        password=_require_env("MYSQL_PASSWORD"),
-        database=_require_env("MYSQL_DB"),
-        port=int(get_env("MYSQL_PORT", "3306")),
-    )
-    with PyMySQLUnitOfWork(mysql_config) as uow:
-        repo = InboxesRepository(uow.connection, account_id=int(_require_env("CHATWOOT_ACCOUNT_ID")))
-        repo.ensure_table()
-        inboxes = repo.list_inboxes()
-        print_inboxes_table(inboxes)
+    inboxes = fetch_inboxes(int(_require_env("CHATWOOT_ACCOUNT_ID")))
+    print_inboxes_table(inboxes)
 
 
 def _handle_list_conversations() -> None:
-    mysql_config = MySQLConfig(
-        host=_require_env("MYSQL_HOST"),
-        user=_require_env("MYSQL_USER"),
-        password=_require_env("MYSQL_PASSWORD"),
-        database=_require_env("MYSQL_DB"),
-        port=int(get_env("MYSQL_PORT", "3306")),
-    )
-    with PyMySQLUnitOfWork(mysql_config) as uow:
-        repo = ConversationsRepository(uow.connection)
-        repo.ensure_table()
-        conversations = repo.list_conversations()
-        print_conversations_table(conversations)
+    conversations = fetch_conversations()
+    print_conversations_table(conversations)
 
 
 def _handle_list_messages() -> None:
-    mysql_config = MySQLConfig(
-        host=_require_env("MYSQL_HOST"),
-        user=_require_env("MYSQL_USER"),
-        password=_require_env("MYSQL_PASSWORD"),
-        database=_require_env("MYSQL_DB"),
-        port=int(get_env("MYSQL_PORT", "3306")),
-    )
-    with PyMySQLUnitOfWork(mysql_config) as uow:
-        repo = MessagesRepository(uow.connection)
-        repo.ensure_table()
-        messages = repo.list_messages()
-        print_messages_table(messages)
+    messages = fetch_messages()
+    print_messages_table(messages)
 
 
 def _handle_list_accounts() -> None:
-    mysql_config = MySQLConfig(
-        host=_require_env("MYSQL_HOST"),
-        user=_require_env("MYSQL_USER"),
-        password=_require_env("MYSQL_PASSWORD"),
-        database=_require_env("MYSQL_DB"),
-        port=int(get_env("MYSQL_PORT", "3306")),
-    )
-    with PyMySQLUnitOfWork(mysql_config) as uow:
-        repo = AccountsRepository(uow.connection)
-        repo.ensure_table()
-        accounts = repo.list_accounts()
-        print_accounts_table(accounts)
+    accounts = fetch_accounts()
+    print_accounts_table(accounts)
 
 
 def _handle_sync(args, logger) -> None:
@@ -294,6 +262,10 @@ def main() -> None:
             "--list-conversations o --list-messages."
         )
         sys.exit(1)
+
+    if args.tui:
+        As400App().run(title="Chatwoot AS/400 TUI")
+        return
 
     if args.list_inboxes:
         try:

@@ -48,13 +48,18 @@ Menu AS/400 (sin argumentos):
 python run_cli.py
 ```
 
+Textual AS/400 TUI:
+```bash
+python run_cli.py --tui
+```
+
 Windows shortcut:
 ```bat
 run.bat --list-accounts
+```
 
 ## Tablas en MySQL
 - `1_accounts`
 - `2_inboxes`
 - `3_conversations`
 - `4_messages`
-```

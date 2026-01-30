@@ -112,8 +112,7 @@ def test_cli_json_health(monkeypatch, capsys) -> None:
 def test_cli_list_inboxes(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--list-inboxes"])
-    monkeypatch.setattr(cli, "InboxesRepository", FakeRepo)
-    monkeypatch.setattr(cli, "PyMySQLUnitOfWork", lambda *_args, **_kwargs: _FakeUow())
+    monkeypatch.setattr(cli, "fetch_inboxes", lambda account_id: [{"id": 1, "account_id": account_id}])
     monkeypatch.setattr(cli, "print_inboxes_table", lambda *_args, **_kwargs: None)
     cli.main()
 
@@ -121,8 +120,7 @@ def test_cli_list_inboxes(monkeypatch) -> None:
 def test_cli_list_conversations(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--list-conversations"])
-    monkeypatch.setattr(cli, "ConversationsRepository", FakeRepo)
-    monkeypatch.setattr(cli, "PyMySQLUnitOfWork", lambda *_args, **_kwargs: _FakeUow())
+    monkeypatch.setattr(cli, "fetch_conversations", lambda: [{"id": 1}])
     monkeypatch.setattr(cli, "print_conversations_table", lambda *_args, **_kwargs: None)
     cli.main()
 
@@ -130,8 +128,7 @@ def test_cli_list_conversations(monkeypatch) -> None:
 def test_cli_list_messages(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--list-messages"])
-    monkeypatch.setattr(cli, "MessagesRepository", FakeRepo)
-    monkeypatch.setattr(cli, "PyMySQLUnitOfWork", lambda *_args, **_kwargs: _FakeUow())
+    monkeypatch.setattr(cli, "fetch_messages", lambda: [{"id": 99}])
     monkeypatch.setattr(cli, "print_messages_table", lambda *_args, **_kwargs: None)
     cli.main()
 
@@ -139,8 +136,7 @@ def test_cli_list_messages(monkeypatch) -> None:
 def test_cli_list_accounts(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--list-accounts"])
-    monkeypatch.setattr(cli, "AccountsRepository", FakeRepo)
-    monkeypatch.setattr(cli, "PyMySQLUnitOfWork", lambda *_args, **_kwargs: _FakeUow())
+    monkeypatch.setattr(cli, "fetch_accounts", lambda: [{"id": 1}])
     monkeypatch.setattr(cli, "print_accounts_table", lambda *_args, **_kwargs: None)
     cli.main()
 

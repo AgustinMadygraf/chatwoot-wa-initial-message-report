@@ -1,34 +1,51 @@
-"""Simple console logger with levels."""
+"""Logging helpers."""
 
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass
 from datetime import datetime
+
+
+def _emit_json(entry: dict[str, str | dict]) -> None:
+    print(json.dumps(entry))
 
 
 @dataclass
 class Logger:
     name: str = "app"
     level: str = "INFO"
+    fmt: str = os.getenv("LOG_FORMAT", "text")
 
-    def _emit(self, level: str, message: str) -> None:
+    def _emit(self, level: str, message: str, **extras: dict) -> None:
         levels = ["DEBUG", "INFO", "WARNING", "ERROR"]
         if levels.index(level) < levels.index(self.level):
             return
         ts = datetime.utcnow().isoformat(timespec="seconds")
-        print(f"[{ts}] {self.name} {level}: {message}")
+        entry = {
+            "timestamp": ts,
+            "logger": self.name,
+            "level": level,
+            "message": message,
+        }
+        entry.update(extras)
+        if self.fmt == "json":
+            _emit_json(entry)
+        else:
+            print(f"[{ts}] {self.name} {level}: {message}")
 
-    def debug(self, message: str) -> None:
-        self._emit("DEBUG", message)
+    def debug(self, message: str, **extras: dict) -> None:
+        self._emit("DEBUG", message, **extras)
 
-    def info(self, message: str) -> None:
-        self._emit("INFO", message)
+    def info(self, message: str, **extras: dict) -> None:
+        self._emit("INFO", message, **extras)
 
-    def warning(self, message: str) -> None:
-        self._emit("WARNING", message)
+    def warning(self, message: str, **extras: dict) -> None:
+        self._emit("WARNING", message, **extras)
 
-    def error(self, message: str) -> None:
-        self._emit("ERROR", message)
+    def error(self, message: str, **extras: dict) -> None:
+        self._emit("ERROR", message, **extras)
 
 
 def get_logger(name: str = "app", level: str | None = None) -> Logger:
