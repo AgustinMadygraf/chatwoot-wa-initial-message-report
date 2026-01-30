@@ -62,11 +62,9 @@ def print_messages_table(messages: Iterable[dict]) -> None:
         ("id", 7),
         ("conversation_id", 8),
         ("inbox_id", 8),
-        ("message_type", 8),
-        ("sender_type", 10),
-        ("sender__name", 14),
         ("created_at", 19),
         ("content", 28),
+        ("last_synced_at", 19),
     ]
     _render_table_paginated(console, "MENSAJES", "MYSQL", columns, messages, _row_from_raw)
 

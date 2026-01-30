@@ -17,11 +17,7 @@ CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
     last_activity_at BIGINT,
     last_synced_at DATETIME,
     INDEX idx_account_id (account_id),
-    INDEX idx_inbox_id (inbox_id),
-    CONSTRAINT fk_conversations_account
-        FOREIGN KEY (account_id) REFERENCES 1_accounts(id),
-    CONSTRAINT fk_conversations_inbox
-        FOREIGN KEY (inbox_id) REFERENCES 2_inboxes(id)
+    INDEX idx_inbox_id (inbox_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 """
 
