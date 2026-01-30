@@ -47,6 +47,11 @@ def sync_conversations(
             logger.warning(f"Conversaciones fallo inesperado en pagina {page}: {exc}")
             break
         items = list(_extract_conversations(payload))
+        logger.debug(
+            "Conversaciones recibidas",
+            page=page,
+            total=len(items),
+        )
         if not items:
             logger.info("No hay mas conversaciones en la API.")
             break
@@ -54,7 +59,15 @@ def sync_conversations(
             model = Conversation.from_payload(convo)
             if model.id is None:
                 continue
-            repo.upsert_conversation(model.to_record())
+            logger.debug(
+                "Conversacion payload",
+                conversation_id=model.id,
+                inbox_id=convo.get("inbox_id"),
+                account_id=convo.get("account_id"),
+                status=convo.get("status"),
+                sender=convo.get("meta", {}).get("sender") if isinstance(convo, dict) else None,
+            )
+            repo.upsert_conversation(convo)
             conversation_ids.append(int(model.id))
         if progress:
             progress(page, len(conversation_ids))

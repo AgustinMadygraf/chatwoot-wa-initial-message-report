@@ -12,10 +12,17 @@ CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
     id BIGINT PRIMARY KEY,
     account_id BIGINT,
     inbox_id BIGINT,
+    address VARCHAR(255),
     status VARCHAR(64),
     created_at BIGINT,
     last_activity_at BIGINT,
-    last_synced_at DATETIME
+    last_synced_at DATETIME,
+    INDEX idx_account_id (account_id),
+    INDEX idx_inbox_id (inbox_id),
+    CONSTRAINT fk_conversations_account
+        FOREIGN KEY (account_id) REFERENCES 1_accounts(id),
+    CONSTRAINT fk_conversations_inbox
+        FOREIGN KEY (inbox_id) REFERENCES 2_inboxes(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 """
 
@@ -23,6 +30,7 @@ BASE_COLUMNS = {
     "id",
     "account_id",
     "inbox_id",
+    "address",
     "status",
     "created_at",
     "last_activity_at",
@@ -39,6 +47,28 @@ class ConversationsRepository:
             cursor.execute(CREATE_CONVERSATIONS_TABLE_SQL)
             cursor.execute(f"ALTER TABLE {TABLE_NAME} ROW_FORMAT=DYNAMIC")
             self._downgrade_dynamic_varchars(cursor)
+            try:
+                cursor.execute(
+                    f"ALTER TABLE {TABLE_NAME} ADD COLUMN address VARCHAR(255)"
+                )
+            except Exception:
+                pass
+            self._ensure_index(cursor, "idx_account_id", "account_id")
+            self._ensure_index(cursor, "idx_inbox_id", "inbox_id")
+            self._ensure_fk(
+                cursor,
+                "fk_conversations_account",
+                "account_id",
+                "1_accounts",
+                "id",
+            )
+            self._ensure_fk(
+                cursor,
+                "fk_conversations_inbox",
+                "inbox_id",
+                "2_inboxes",
+                "id",
+            )
 
     def list_conversations(self) -> list[dict[str, Any]]:
         with self.connection.cursor() as cursor:
@@ -48,6 +78,7 @@ class ConversationsRepository:
                     id,
                     inbox_id,
                     status,
+                    address,
                     created_at,
                     last_activity_at,
                     meta__sender__id,
@@ -83,6 +114,29 @@ class ConversationsRepository:
                     continue
                 cursor.execute(f"ALTER TABLE {TABLE_NAME} ADD COLUMN {column} {col_type}")
 
+    def _ensure_index(self, cursor, name: str, column: str) -> None:
+        try:
+            cursor.execute(f"CREATE INDEX {name} ON {TABLE_NAME} ({column})")
+        except Exception:
+            pass
+
+    def _ensure_fk(
+        self,
+        cursor,
+        name: str,
+        column: str,
+        ref_table: str,
+        ref_column: str,
+    ) -> None:
+        try:
+            cursor.execute(
+                f"ALTER TABLE {TABLE_NAME} "
+                f"ADD CONSTRAINT {name} FOREIGN KEY ({column}) "
+                f"REFERENCES {ref_table}({ref_column})"
+            )
+        except Exception:
+            pass
+
     def _get_existing_columns(self) -> set[str]:
         with self.connection.cursor() as cursor:
             cursor.execute(f"SHOW COLUMNS FROM {TABLE_NAME}")
@@ -111,10 +165,14 @@ class ConversationsRepository:
 
 def _flatten_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str]]:
     now = datetime.now(tz=timezone.utc).replace(tzinfo=None)
+    address = payload.get("address")
+    if not (isinstance(address, str) and address.strip()):
+        address = _pick_address(payload)
     flattened: dict[str, Any] = {
         "id": payload.get("id"),
         "account_id": payload.get("account_id"),
         "inbox_id": payload.get("inbox_id"),
+        "address": address.strip() if isinstance(address, str) else address,
         "status": payload.get("status"),
         "created_at": payload.get("created_at"),
         "last_activity_at": payload.get("last_activity_at"),
@@ -186,3 +244,25 @@ def _infer_column_type(value: Any) -> str:
     if isinstance(value, float):
         return "DOUBLE"
     return "TEXT"
+
+
+def _pick_address(payload: dict[str, Any]) -> str | None:
+    for key in ("phone_number", "email"):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    meta = payload.get("meta")
+    if isinstance(meta, dict):
+        sender = meta.get("sender")
+        if isinstance(sender, dict):
+            for key in ("phone_number", "email"):
+                value = sender.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+    sender = payload.get("sender")
+    if isinstance(sender, dict):
+        for key in ("phone_number", "email"):
+            value = sender.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    return None
