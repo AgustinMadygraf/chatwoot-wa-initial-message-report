@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
     INDEX idx_conversation_id (conversation_id),
     INDEX idx_inbox_id (inbox_id),
     INDEX idx_conversation_created (conversation_id, created_at),
-    INDEX idx_inbox_created (inbox_id, created_at)
+    INDEX idx_inbox_created (inbox_id, created_at),
+    INDEX idx_inbox_conversation_created_synced (inbox_id, conversation_id, created_at, last_synced_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;
 """
 
@@ -46,6 +47,11 @@ class MessagesRepository:
             self._ensure_index(cursor, "idx_inbox_id", "inbox_id")
             self._ensure_index(cursor, "idx_conversation_created", "conversation_id, created_at")
             self._ensure_index(cursor, "idx_inbox_created", "inbox_id, created_at")
+            self._ensure_index(
+                cursor,
+                "idx_inbox_conversation_created_synced",
+                "inbox_id, conversation_id, created_at, last_synced_at",
+            )
             self._ensure_fk(
                 cursor,
                 "fk_messages_conversation",
@@ -73,7 +79,7 @@ class MessagesRepository:
                     created_at,
                     content
                 FROM {TABLE_NAME}
-                ORDER BY id DESC
+                ORDER BY inbox_id ASC, conversation_id ASC, created_at ASC, last_synced_at ASC
                 """
             )
             return list(cursor.fetchall() or [])
