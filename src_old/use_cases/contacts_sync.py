@@ -1,11 +1,11 @@
-from typing import Dict, Iterable, Optional
+from collections.abc import Iterable
 
 from src_old.infrastructure.chatwoot_api.client import ChatwootClient
 from src_old.infrastructure.mysql.contacts_repository import ContactsRepository
 from src_old.shared.logger import Logger, get_logger
 
 
-def _extract_contacts(payload: Dict) -> Iterable[Dict]:
+def _extract_contacts(payload: dict) -> Iterable[dict]:
     data = payload.get("payload")
     if isinstance(data, list):
         return data
@@ -18,9 +18,9 @@ def _extract_contacts(payload: Dict) -> Iterable[Dict]:
 def sync_contacts(
     client: ChatwootClient,
     repo: ContactsRepository,
-    logger: Optional[Logger] = None,
-    per_page: Optional[int] = None,
-) -> Dict[str, int]:
+    logger: Logger | None = None,
+    per_page: int | None = None,
+) -> dict[str, int]:
     logger = logger or get_logger("contacts")
     repo.ensure_table()
 
@@ -41,10 +41,13 @@ def sync_contacts(
             stats["total_listed"] += 1
             remote_updated_at = contact.get("updated_at")
             local_updated_at = repo.get_updated_at(int(contact_id))
-            if local_updated_at is not None and remote_updated_at is not None:
-                if int(remote_updated_at) <= int(local_updated_at):
-                    stats["total_skipped"] += 1
-                    continue
+            if (
+                local_updated_at is not None
+                and remote_updated_at is not None
+                and int(remote_updated_at) <= int(local_updated_at)
+            ):
+                stats["total_skipped"] += 1
+                continue
             repo.upsert_contact(contact)
             stats["total_upserted"] += 1
 

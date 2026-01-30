@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, Iterable, List, Optional, Tuple
 
-from src_old.infrastructure.chatwoot_api.client import ChatwootClient
 from src_old.entities.transform import categorize, normalize_literal
+from src_old.infrastructure.chatwoot_api.client import ChatwootClient
 from src_old.shared.logger import Logger, get_logger
 
 
@@ -21,7 +21,7 @@ class InitialMessage:
     category: str
 
 
-def _parse_epoch(epoch: Optional[int]) -> Optional[datetime]:
+def _parse_epoch(epoch: int | None) -> datetime | None:
     if epoch is None:
         return None
     try:
@@ -30,13 +30,13 @@ def _parse_epoch(epoch: Optional[int]) -> Optional[datetime]:
         return None
 
 
-def _to_iso(dt: Optional[datetime]) -> Optional[str]:
+def _to_iso(dt: datetime | None) -> str | None:
     if dt is None:
         return None
     return dt.isoformat()
 
 
-def _get_payload_list(payload: Dict) -> List[Dict]:
+def _get_payload_list(payload: dict) -> list[dict]:
     if isinstance(payload.get("payload"), list):
         return payload["payload"]
     if isinstance(payload.get("data"), list):
@@ -45,17 +45,20 @@ def _get_payload_list(payload: Dict) -> List[Dict]:
         return payload["data"]["payload"]
     return []
 
-def _get_conversation_payload(conversation: Dict) -> Dict:
+
+def _get_conversation_payload(conversation: dict) -> dict:
     if isinstance(conversation.get("payload"), dict):
         return conversation["payload"]
-    if isinstance(conversation.get("data"), dict) and isinstance(conversation["data"].get("payload"), dict):
+    if isinstance(conversation.get("data"), dict) and isinstance(
+        conversation["data"].get("payload"), dict
+    ):
         return conversation["data"]["payload"]
     if isinstance(conversation.get("data"), dict):
         return conversation["data"]
     return conversation
 
 
-def _get_messages(conversation: Dict) -> Optional[List[Dict]]:
+def _get_messages(conversation: dict) -> list[dict] | None:
     payload = _get_conversation_payload(conversation)
     if isinstance(payload.get("messages"), list):
         return payload["messages"]
@@ -67,12 +70,12 @@ def _get_messages(conversation: Dict) -> Optional[List[Dict]]:
 def list_conversations(
     client: ChatwootClient,
     inbox_id: str,
-    since: Optional[datetime] = None,
+    since: datetime | None = None,
     status: str = "all",
-    per_page: Optional[int] = None,
-    agent_id: Optional[int] = None,
-    logger: Optional[Logger] = None,
-) -> Iterable[Dict]:
+    per_page: int | None = None,
+    agent_id: int | None = None,
+    logger: Logger | None = None,
+) -> Iterable[dict]:
     page = 1
     while True:
         if logger:
@@ -100,7 +103,7 @@ def list_conversations(
         page += 1
 
 
-def _extract_initial_message(conversation: Dict) -> Optional[Tuple[Dict, Dict]]:
+def _extract_initial_message(conversation: dict) -> tuple[dict, dict] | None:
     messages = _get_messages(conversation)
     if not isinstance(messages, list):
         return None
@@ -130,14 +133,14 @@ def _extract_initial_message(conversation: Dict) -> Optional[Tuple[Dict, Dict]]:
 def extract_initial_messages(
     client: ChatwootClient,
     inbox_id: str,
-    since: Optional[datetime] = None,
+    since: datetime | None = None,
     status: str = "all",
-    fallback_statuses: Optional[List[str]] = None,
-    per_page: Optional[int] = None,
-    agent_id: Optional[int] = None,
-    logger: Optional[Logger] = None,
-) -> Tuple[List[InitialMessage], Dict[str, int]]:
-    results: List[InitialMessage] = []
+    fallback_statuses: list[str] | None = None,
+    per_page: int | None = None,
+    agent_id: int | None = None,
+    logger: Logger | None = None,
+) -> tuple[list[InitialMessage], dict[str, int]]:
+    results: list[InitialMessage] = []
     stats = {
         "total_listed": 0,
         "total_processed": 0,
@@ -147,7 +150,7 @@ def extract_initial_messages(
     logger = logger or get_logger("extractor")
     logger.info("Listando conversaciones...")
 
-    def _iter_convos(active_status: str) -> Iterable[Dict]:
+    def _iter_convos(active_status: str) -> Iterable[dict]:
         return list_conversations(
             client,
             inbox_id,

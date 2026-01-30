@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 import requests
 
@@ -18,7 +18,7 @@ def _get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _safe_keys(obj: Any) -> List[str]:
+def _safe_keys(obj: Any) -> list[str]:
     return sorted(obj.keys()) if isinstance(obj, dict) else []
 
 
@@ -45,7 +45,7 @@ def main() -> int:
         logger.error(f"Request failed: {exc}")
         return 3
 
-    data: Dict[str, Any] = resp.json()
+    data: dict[str, Any] = resp.json()
     logger.info("Top-level keys: " + ", ".join(_safe_keys(data)))
 
     payload = data.get("payload")

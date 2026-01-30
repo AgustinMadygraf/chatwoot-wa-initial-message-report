@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import Callable, Dict, Iterable, List, Optional
+from collections.abc import Callable, Iterable
+
+from requests import RequestException
 
 from src.infrastructure.chatwoot_api.client import ChatwootClient
 from src.infrastructure.pymysql.conversations_repository import ConversationsRepository
 from src.shared.logger import Logger, get_logger
-from requests import RequestException
 
 
-def _extract_conversations(payload: Dict) -> Iterable[Dict]:
+def _extract_conversations(payload: dict) -> Iterable[dict]:
     data = payload.get("payload")
     if isinstance(data, list):
         return data
@@ -25,15 +26,15 @@ def _extract_conversations(payload: Dict) -> Iterable[Dict]:
 def sync_conversations(
     client: ChatwootClient,
     repo: ConversationsRepository,
-    logger: Optional[Logger] = None,
-    per_page: Optional[int] = None,
-    progress: Optional[Callable[[int, int], None]] = None,
-) -> List[int]:
+    logger: Logger | None = None,
+    per_page: int | None = None,
+    progress: Callable[[int, int], None] | None = None,
+) -> list[int]:
     logger = logger or get_logger("conversations")
     repo.ensure_table()
 
     page = 1
-    conversation_ids: List[int] = []
+    conversation_ids: list[int] = []
     while True:
         logger.info(f"Consultando conversaciones (pagina {page})...")
         try:

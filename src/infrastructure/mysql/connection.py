@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import pymysql
 
 from src.shared.logger import Logger, get_logger
+
 
 @dataclass
 class MySQLConfig:
@@ -17,17 +17,10 @@ class MySQLConfig:
     connect_timeout: int = 5
 
 
-def check_connection(config: MySQLConfig, logger: Optional[Logger] = None) -> dict:
+def check_connection(config: MySQLConfig, logger: Logger | None = None) -> dict:
     logger = logger or get_logger("mysql")
     logger.debug(
-        "MySQL check: host=%s port=%s user=%s db=%s timeout=%s"
-        % (
-            config.host,
-            config.port,
-            config.user,
-            config.database,
-            config.connect_timeout,
-        )
+        f"MySQL check: host={config.host} port={config.port} user={config.user} db={config.database} timeout={config.connect_timeout}"
     )
     try:
         conn = pymysql.connect(
@@ -46,5 +39,5 @@ def check_connection(config: MySQLConfig, logger: Optional[Logger] = None) -> di
             conn.close()
         return {"ok": True}
     except Exception as exc:  # noqa: BLE001
-        logger.debug("MySQL check failed: %r" % (exc,))
+        logger.debug(f"MySQL check failed: {exc!r}")
         return {"ok": False, "error": str(exc)}

@@ -20,9 +20,8 @@ class PyMySQLAdminGateway(MySQLAdminGateway):
         try:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "CREATE DATABASE IF NOT EXISTS `%s` "
+                    f"CREATE DATABASE IF NOT EXISTS `{safe_db}` "
                     "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-                    % safe_db
                 )
         finally:
             conn.close()

@@ -3,7 +3,7 @@
 Sincroniza datos de Chatwoot a MySQL usando la API: accounts, inboxes, conversaciones y mensajes.
 
 ## Requisitos
-- Python 3.10+
+- Python 3.10.11
 - MySQL/MariaDB
 
 ## Configuracion (.env)

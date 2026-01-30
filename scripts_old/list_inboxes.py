@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 import requests
 
@@ -34,7 +34,7 @@ def main() -> int:
         return 3
 
     data = resp.json()
-    inboxes: List[Dict[str, Any]] = data.get("payload", []) if isinstance(data, dict) else []
+    inboxes: list[dict[str, Any]] = data.get("payload", []) if isinstance(data, dict) else []
     logger.info(f"Total inboxes: {len(inboxes)}")
 
     for inbox in inboxes:

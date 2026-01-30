@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict
-
+from typing import Any
 
 TABLE_NAME = "1_accounts"
 
@@ -26,7 +25,7 @@ class AccountsRepository:
         with self.connection.cursor() as cursor:
             cursor.execute(CREATE_ACCOUNTS_TABLE_SQL)
 
-    def list_accounts(self) -> list[Dict[str, Any]]:
+    def list_accounts(self) -> list[dict[str, Any]]:
         with self.connection.cursor() as cursor:
             cursor.execute(
                 f"""
@@ -42,7 +41,7 @@ class AccountsRepository:
             )
             return list(cursor.fetchall() or [])
 
-    def upsert_account(self, payload: Dict[str, Any]) -> None:
+    def upsert_account(self, payload: dict[str, Any]) -> None:
         flattened = self._flatten_payload(payload)
         columns = list(flattened.keys())
         insert_cols = ", ".join(columns)
@@ -55,7 +54,8 @@ class AccountsRepository:
         """
         with self.connection.cursor() as cursor:
             cursor.execute(sql, flattened)
-    def _flatten_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+
+    def _flatten_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
         now = datetime.now(tz=timezone.utc).replace(tzinfo=None)
         created_at = _parse_iso_datetime(payload.get("created_at"))
         return {

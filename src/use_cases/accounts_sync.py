@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, Optional
-
 from src.infrastructure.chatwoot_api.client import ChatwootClient
 from src.infrastructure.pymysql.accounts_repository import AccountsRepository
 from src.shared.logger import Logger, get_logger
@@ -10,8 +8,8 @@ from src.shared.logger import Logger, get_logger
 def sync_account(
     client: ChatwootClient,
     repo: AccountsRepository,
-    logger: Optional[Logger] = None,
-) -> Dict[str, int]:
+    logger: Logger | None = None,
+) -> dict[str, int]:
     logger = logger or get_logger("accounts")
     repo.ensure_table()
 

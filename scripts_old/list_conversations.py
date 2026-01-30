@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 import requests
 
@@ -40,11 +40,13 @@ def main() -> int:
             return 3
 
         data = resp.json()
-        payload: List[Dict[str, Any]] = []
+        payload: list[dict[str, Any]] = []
         if isinstance(data, dict):
             if isinstance(data.get("payload"), list):
                 payload = data.get("payload", [])
-            elif isinstance(data.get("data"), dict) and isinstance(data["data"].get("payload"), list):
+            elif isinstance(data.get("data"), dict) and isinstance(
+                data["data"].get("payload"), list
+            ):
                 payload = data["data"]["payload"]
         logger.info(f"Page {page} items: {len(payload)}")
         if not payload:

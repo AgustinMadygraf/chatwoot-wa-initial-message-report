@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from src.infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
-from src.infrastructure.mysql.connection import MySQLConfig, check_connection as check_mysql
+from src.infrastructure.mysql.connection import MySQLConfig
+from src.infrastructure.mysql.connection import check_connection as check_mysql
 from src.shared.config import get_env
 from src.shared.logger import Logger, get_logger
 
 
-def _build_chatwoot_config() -> Optional[ChatwootClientConfig]:
+def _build_chatwoot_config() -> ChatwootClientConfig | None:
     base_url = get_env("CHATWOOT_BASE_URL")
     account_id = get_env("CHATWOOT_ACCOUNT_ID")
     api_token = get_env("CHATWOOT_API_ACCESS_TOKEN")
@@ -17,7 +16,7 @@ def _build_chatwoot_config() -> Optional[ChatwootClientConfig]:
     return ChatwootClientConfig(base_url=base_url, account_id=account_id, api_token=api_token)
 
 
-def _build_mysql_config() -> Optional[MySQLConfig]:
+def _build_mysql_config() -> MySQLConfig | None:
     host = get_env("MYSQL_HOST")
     user = get_env("MYSQL_USER")
     password = get_env("MYSQL_PASSWORD")
@@ -29,7 +28,7 @@ def _build_mysql_config() -> Optional[MySQLConfig]:
     return MySQLConfig(host=host, user=user, password=password, database=database, port=port)
 
 
-def run_health_checks(logger: Optional[Logger] = None) -> dict:
+def run_health_checks(logger: Logger | None = None) -> dict:
     logger = logger or get_logger("health")
     results: dict = {"chatwoot": None, "mysql": None}
 

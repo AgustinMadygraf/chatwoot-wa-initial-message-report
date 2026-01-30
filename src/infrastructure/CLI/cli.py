@@ -7,25 +7,12 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-
 from datetime import datetime
 
 from rich.live import Live
 
 from src.entities.mysql_config import MySQLConfig
 from src.infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
-from src.infrastructure.pymysql.connection import get_mysql_connection
-from src.infrastructure.pymysql.accounts_repository import AccountsRepository
-from src.infrastructure.pymysql.inboxes_repository import InboxesRepository
-from src.infrastructure.pymysql.conversations_repository import ConversationsRepository
-from src.infrastructure.pymysql.messages_repository import MessagesRepository
-from src.shared.config import get_env, load_env_file
-from src.shared.logger import get_logger
-from src.use_cases.accounts_sync import sync_account
-from src.use_cases.health_check import run_health_checks
-from src.use_cases.inboxes_sync import sync_inboxes
-from src.use_cases.conversations_sync import sync_conversations
-from src.use_cases.messages_sync import sync_messages
 from src.infrastructure.CLI.ui import (
     build_sync_progress_screen,
     print_accounts_table,
@@ -35,6 +22,18 @@ from src.infrastructure.CLI.ui import (
     print_messages_table,
     print_sync_screen,
 )
+from src.infrastructure.pymysql.accounts_repository import AccountsRepository
+from src.infrastructure.pymysql.connection import get_mysql_connection
+from src.infrastructure.pymysql.conversations_repository import ConversationsRepository
+from src.infrastructure.pymysql.inboxes_repository import InboxesRepository
+from src.infrastructure.pymysql.messages_repository import MessagesRepository
+from src.shared.config import get_env, load_env_file
+from src.shared.logger import get_logger
+from src.use_cases.accounts_sync import sync_account
+from src.use_cases.conversations_sync import sync_conversations
+from src.use_cases.health_check import run_health_checks
+from src.use_cases.inboxes_sync import sync_inboxes
+from src.use_cases.messages_sync import sync_messages
 
 
 def _get_args() -> argparse.Namespace:
@@ -88,15 +87,18 @@ def main() -> None:
     args = _get_args()
     logger = get_logger("cli", level="DEBUG" if args.debug else "INFO")
 
-    if sum(
-        [
-            bool(args.sync),
-            bool(args.list_accounts),
-            bool(args.list_inboxes),
-            bool(args.list_conversations),
-            bool(args.list_messages),
-        ]
-    ) > 1:
+    if (
+        sum(
+            [
+                bool(args.sync),
+                bool(args.list_accounts),
+                bool(args.list_inboxes),
+                bool(args.list_conversations),
+                bool(args.list_messages),
+            ]
+        )
+        > 1
+    ):
         print(
             "Error: usa solo una opcion: --sync, --list-inboxes, --list-accounts, "
             "--list-conversations o --list-messages."

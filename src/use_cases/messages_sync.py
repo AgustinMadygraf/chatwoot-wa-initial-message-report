@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import Callable, Dict, Iterable, Optional
+from collections.abc import Callable, Iterable
+
+from requests import RequestException
 
 from src.infrastructure.chatwoot_api.client import ChatwootClient
 from src.infrastructure.pymysql.messages_repository import MessagesRepository
 from src.shared.logger import Logger, get_logger
-from requests import RequestException
 
 
-def _extract_messages(payload: Dict) -> Iterable[Dict]:
+def _extract_messages(payload: dict) -> Iterable[dict]:
     data = payload.get("payload")
     if isinstance(data, list):
         return data
@@ -22,10 +23,10 @@ def sync_messages(
     client: ChatwootClient,
     repo: MessagesRepository,
     conversation_ids: Iterable[int],
-    logger: Optional[Logger] = None,
-    per_page: Optional[int] = None,
-    progress: Optional[Callable[[int, int, int], None]] = None,
-) -> Dict[str, int]:
+    logger: Logger | None = None,
+    per_page: int | None = None,
+    progress: Callable[[int, int, int], None] | None = None,
+) -> dict[str, int]:
     logger = logger or get_logger("messages")
     repo.ensure_table()
 
@@ -40,9 +41,7 @@ def sync_messages(
                 )
             except RequestException as exc:
                 errors += 1
-                logger.warning(
-                    f"Mensajes fallo en conversation {convo_id}, pagina {page}: {exc}"
-                )
+                logger.warning(f"Mensajes fallo en conversation {convo_id}, pagina {page}: {exc}")
                 break
             except Exception as exc:  # noqa: BLE001
                 errors += 1

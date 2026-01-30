@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 
 TABLE_NAME = "2_inboxes"
 
@@ -31,7 +31,7 @@ class InboxesRepository:
             cursor.execute(CREATE_INBOXES_TABLE_SQL)
             cursor.execute(f"ALTER TABLE {TABLE_NAME} ROW_FORMAT=DYNAMIC")
 
-    def list_inboxes(self) -> list[Dict[str, Any]]:
+    def list_inboxes(self) -> list[dict[str, Any]]:
         with self.connection.cursor() as cursor:
             cursor.execute(
                 f"""
@@ -48,7 +48,7 @@ class InboxesRepository:
             )
             return list(cursor.fetchall() or [])
 
-    def upsert_inbox(self, payload: Dict[str, Any]) -> None:
+    def upsert_inbox(self, payload: dict[str, Any]) -> None:
         flattened = _flatten_payload(payload, account_id=self.account_id)
         columns = list(flattened.keys())
         insert_cols = ", ".join(columns)
@@ -63,7 +63,7 @@ class InboxesRepository:
             cursor.execute(sql, flattened)
 
 
-def _flatten_payload(payload: Dict[str, Any], *, account_id: int) -> Dict[str, Any]:
+def _flatten_payload(payload: dict[str, Any], *, account_id: int) -> dict[str, Any]:
     now = datetime.now(tz=timezone.utc).replace(tzinfo=None)
     channel_type = payload.get("channel_type")
     if isinstance(channel_type, str) and channel_type.startswith("Channel::"):
@@ -78,7 +78,7 @@ def _flatten_payload(payload: Dict[str, Any], *, account_id: int) -> Dict[str, A
     }
 
 
-def _choose_address(payload: Dict[str, Any]) -> str | None:
+def _choose_address(payload: dict[str, Any]) -> str | None:
     phone = payload.get("phone_number")
     if isinstance(phone, str) and phone.strip():
         return phone.strip()

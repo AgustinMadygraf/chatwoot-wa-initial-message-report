@@ -1,9 +1,9 @@
 import re
-from typing import Dict, List, Pattern, Tuple
+from re import Pattern
 
 # Editable regex catalog for categorization.
 # Use ASCII-only by escaping accented characters.
-CATEGORIES: List[Tuple[str, Pattern[str]]] = [
+CATEGORIES: list[tuple[str, Pattern[str]]] = [
     (
         "saludo",
         re.compile(

@@ -1,7 +1,6 @@
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
-
+from typing import Any
 
 CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS contacts (
@@ -29,7 +28,7 @@ class ContactsRepository:
         with self.connection.cursor() as cursor:
             cursor.execute(CREATE_TABLE_SQL)
 
-    def get_updated_at(self, contact_id: int) -> Optional[int]:
+    def get_updated_at(self, contact_id: int) -> int | None:
         with self.connection.cursor() as cursor:
             cursor.execute("SELECT updated_at FROM contacts WHERE id=%s", (contact_id,))
             row = cursor.fetchone()
@@ -37,7 +36,7 @@ class ContactsRepository:
                 return None
             return row.get("updated_at")
 
-    def upsert_contact(self, contact: Dict[str, Any]) -> None:
+    def upsert_contact(self, contact: dict[str, Any]) -> None:
         now = datetime.now(tz=timezone.utc).replace(tzinfo=None)
         payload = {
             "id": contact.get("id"),

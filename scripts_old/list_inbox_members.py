@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 import requests
 
@@ -36,14 +36,18 @@ def main() -> int:
         logger.error(f"Request failed: {exc}")
         return 3
 
-    data: Dict[str, Any] = resp.json() if resp.headers.get("Content-Type", "").startswith("application/json") else {}
-    members: List[Dict[str, Any]] = []
+    data: dict[str, Any] = (
+        resp.json() if resp.headers.get("Content-Type", "").startswith("application/json") else {}
+    )
+    members: list[dict[str, Any]] = []
     if isinstance(data.get("payload"), list):
         members = data["payload"]
 
     logger.info(f"Members in inbox {inbox_id}: {len(members)}")
     for member in members:
-        logger.info(f"- id={member.get('id')} name={member.get('name')} email={member.get('email')} role={member.get('role')}")
+        logger.info(
+            f"- id={member.get('id')} name={member.get('name')} email={member.get('email')} role={member.get('role')}"
+        )
 
     return 0
 

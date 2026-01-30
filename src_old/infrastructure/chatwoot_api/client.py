@@ -1,5 +1,5 @@
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 
@@ -14,7 +14,7 @@ class ChatwootClient:
         api_token: str,
         timeout: int = 30,
         min_sleep: float = 0.15,
-        logger: Optional[Logger] = None,
+        logger: Logger | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.account_id = account_id
@@ -24,7 +24,9 @@ class ChatwootClient:
         self.session = requests.Session()
         self.session.headers.update({"api_access_token": api_token})
 
-    def _request(self, method: str, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _request(
+        self, method: str, path: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         url = f"{self.base_url}{path}"
         backoff = 1.0
         for attempt in range(5):
@@ -67,10 +69,10 @@ class ChatwootClient:
         inbox_id: str,
         page: int,
         status: str = "all",
-        per_page: Optional[int] = None,
-        agent_id: Optional[int] = None,
-    ) -> Dict[str, Any]:
-        params: Dict[str, Any] = {"status": status, "page": page}
+        per_page: int | None = None,
+        agent_id: int | None = None,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {"status": status, "page": page}
         if inbox_id:
             params["inbox_id"] = inbox_id
         if per_page:
@@ -83,20 +85,20 @@ class ChatwootClient:
             params=params,
         )
 
-    def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
+    def get_conversation(self, conversation_id: str) -> dict[str, Any]:
         return self._request(
             "GET",
             f"/api/v1/accounts/{self.account_id}/conversations/{conversation_id}",
         )
 
-    def list_inbox_members(self, inbox_id: str) -> Dict[str, Any]:
+    def list_inbox_members(self, inbox_id: str) -> dict[str, Any]:
         return self._request(
             "GET",
             f"/api/v1/accounts/{self.account_id}/inbox_members/{inbox_id}",
         )
 
-    def list_contacts(self, page: int, per_page: Optional[int] = None) -> Dict[str, Any]:
-        params: Dict[str, Any] = {"page": page}
+    def list_contacts(self, page: int, per_page: int | None = None) -> dict[str, Any]:
+        params: dict[str, Any] = {"page": page}
         if per_page:
             params["per_page"] = per_page
         return self._request(

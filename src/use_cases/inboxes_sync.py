@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable, Optional
+from collections.abc import Iterable
 
 from src.infrastructure.chatwoot_api.client import ChatwootClient
 from src.infrastructure.pymysql.inboxes_repository import InboxesRepository
 from src.shared.logger import Logger, get_logger
 
 
-def _extract_inboxes(payload: Dict) -> Iterable[Dict]:
+def _extract_inboxes(payload: dict) -> Iterable[dict]:
     data = payload.get("payload")
     if isinstance(data, list):
         return data
@@ -20,8 +20,8 @@ def _extract_inboxes(payload: Dict) -> Iterable[Dict]:
 def sync_inboxes(
     client: ChatwootClient,
     repo: InboxesRepository,
-    logger: Optional[Logger] = None,
-) -> Dict[str, int]:
+    logger: Logger | None = None,
+) -> dict[str, int]:
     logger = logger or get_logger("inboxes")
     repo.ensure_table()
     payload = client.list_inboxes()

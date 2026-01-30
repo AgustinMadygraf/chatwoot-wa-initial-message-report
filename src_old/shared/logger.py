@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 
 @dataclass
@@ -32,5 +31,5 @@ class Logger:
         self._emit("ERROR", message)
 
 
-def get_logger(name: str = "app", level: Optional[str] = None) -> Logger:
+def get_logger(name: str = "app", level: str | None = None) -> Logger:
     return Logger(name=name, level=(level or "INFO").upper())

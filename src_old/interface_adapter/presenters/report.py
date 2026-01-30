@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterable
 from dataclasses import asdict
-from typing import Iterable, Tuple
 
 import pandas as pd
 
@@ -13,10 +13,14 @@ def _ensure_data_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
 
-def build_reports(records: Iterable[InitialMessage]) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def build_reports(
+    records: Iterable[InitialMessage],
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     raw_df = pd.DataFrame([asdict(r) for r in records])
     if raw_df.empty:
-        table_literal = pd.DataFrame(columns=["initial_message_literal", "cantidad", "porcentaje_total"])
+        table_literal = pd.DataFrame(
+            columns=["initial_message_literal", "cantidad", "porcentaje_total"]
+        )
         table_category = pd.DataFrame(columns=["category", "cantidad", "porcentaje_total"])
         return raw_df, table_literal, table_category
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 import requests
 
@@ -37,13 +37,15 @@ def main() -> int:
             return 3
 
         data = resp.json()
-        payload: List[Dict[str, Any]] = data.get("payload", []) if isinstance(data, dict) else []
+        payload: list[dict[str, Any]] = data.get("payload", []) if isinstance(data, dict) else []
         logger.info(f"Page {page} items: {len(payload)}")
         if not payload:
             break
 
         for contact in payload[:10]:
-            logger.info(f"- id={contact.get('id')} name={contact.get('name')} phone={contact.get('phone_number')}")
+            logger.info(
+                f"- id={contact.get('id')} name={contact.get('name')} phone={contact.get('phone_number')}"
+            )
         total += len(payload)
         page += 1
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, Tuple
+from typing import Any
 
 TABLE_NAME = "3_conversations"
 
@@ -40,7 +40,7 @@ class ConversationsRepository:
             cursor.execute(f"ALTER TABLE {TABLE_NAME} ROW_FORMAT=DYNAMIC")
             self._downgrade_dynamic_varchars(cursor)
 
-    def list_conversations(self) -> list[Dict[str, Any]]:
+    def list_conversations(self) -> list[dict[str, Any]]:
         with self.connection.cursor() as cursor:
             cursor.execute(
                 f"""
@@ -58,7 +58,7 @@ class ConversationsRepository:
             )
             return list(cursor.fetchall() or [])
 
-    def upsert_conversation(self, payload: Dict[str, Any]) -> None:
+    def upsert_conversation(self, payload: dict[str, Any]) -> None:
         flattened, dynamic_columns = _flatten_payload(payload)
         if dynamic_columns:
             self._ensure_columns(dynamic_columns)
@@ -75,7 +75,7 @@ class ConversationsRepository:
         with self.connection.cursor() as cursor:
             cursor.execute(sql, flattened)
 
-    def _ensure_columns(self, columns: Dict[str, str]) -> None:
+    def _ensure_columns(self, columns: dict[str, str]) -> None:
         existing = self._get_existing_columns()
         with self.connection.cursor() as cursor:
             for column, col_type in columns.items():
@@ -96,8 +96,9 @@ class ConversationsRepository:
             FROM information_schema.COLUMNS
             WHERE TABLE_SCHEMA = DATABASE()
               AND TABLE_NAME = %s
-            """
-        , (TABLE_NAME,))
+            """,
+            (TABLE_NAME,),
+        )
         rows = cursor.fetchall() or []
         for row in rows:
             name = row.get("COLUMN_NAME")
@@ -108,9 +109,9 @@ class ConversationsRepository:
                 cursor.execute(f"ALTER TABLE {TABLE_NAME} MODIFY COLUMN {name} TEXT")
 
 
-def _flatten_payload(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, str]]:
+def _flatten_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str]]:
     now = datetime.now(tz=timezone.utc).replace(tzinfo=None)
-    flattened: Dict[str, Any] = {
+    flattened: dict[str, Any] = {
         "id": payload.get("id"),
         "account_id": payload.get("account_id"),
         "inbox_id": payload.get("inbox_id"),
@@ -119,7 +120,7 @@ def _flatten_payload(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str,
         "last_activity_at": payload.get("last_activity_at"),
         "last_synced_at": now,
     }
-    dynamic_columns: Dict[str, str] = {}
+    dynamic_columns: dict[str, str] = {}
     _flatten_value("", payload, flattened, dynamic_columns)
     return flattened, dynamic_columns
 
@@ -127,8 +128,8 @@ def _flatten_payload(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str,
 def _flatten_value(
     prefix: str,
     value: Any,
-    out: Dict[str, Any],
-    types: Dict[str, str],
+    out: dict[str, Any],
+    types: dict[str, str],
 ) -> None:
     if isinstance(value, dict):
         for key, item in value.items():

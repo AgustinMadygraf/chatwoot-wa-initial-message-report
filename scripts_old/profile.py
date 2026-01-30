@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Dict
+from typing import Any
 
 import requests
 
@@ -32,7 +32,7 @@ def main() -> int:
         logger.error(f"Request failed: {exc}")
         return 3
 
-    data: Dict[str, Any] = (
+    data: dict[str, Any] = (
         resp.json() if resp.headers.get("Content-Type", "").startswith("application/json") else {}
     )
     logger.info("Profile response keys: " + ", ".join(sorted(data.keys())))

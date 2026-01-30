@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 
@@ -11,7 +11,7 @@ from src_old.shared.config import get_env, load_env_file
 from src_old.shared.logger import get_logger
 
 
-def _maybe_int(value: Optional[str]) -> Optional[int]:
+def _maybe_int(value: str | None) -> int | None:
     if value is None:
         return None
     try:
@@ -38,7 +38,7 @@ def main() -> int:
     agent_id = _maybe_int(get_env("CHATWOOT_AGENT_ID"))
     page = _maybe_int(get_env("CHATWOOT_PAGE")) or 1
 
-    params: Dict[str, Any] = {"status": status, "page": page}
+    params: dict[str, Any] = {"status": status, "page": page}
     if inbox_id:
         params["inbox_id"] = inbox_id
     if per_page:
@@ -59,7 +59,7 @@ def main() -> int:
     content_type = resp.headers.get("Content-Type", "")
     logger.info(f"Content-Type: {content_type}")
 
-    data: Dict[str, Any] = {}
+    data: dict[str, Any] = {}
     if content_type.startswith("application/json"):
         try:
             data = resp.json()

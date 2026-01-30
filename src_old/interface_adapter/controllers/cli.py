@@ -1,18 +1,17 @@
 import argparse
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 from src_old.infrastructure.chatwoot_api.client import ChatwootClient
 from src_old.infrastructure.mysql.connection import get_mysql_connection
 from src_old.infrastructure.mysql.contacts_repository import ContactsRepository
-from src_old.use_cases.contacts_sync import sync_contacts
-from src_old.use_cases.extractor import extract_initial_messages
 from src_old.interface_adapter.presenters.report import build_reports, write_reports
 from src_old.shared.config import get_env, load_env_file
 from src_old.shared.logger import get_logger
+from src_old.use_cases.contacts_sync import sync_contacts
+from src_old.use_cases.extractor import extract_initial_messages
 
 
-def _parse_since(value: Optional[str]) -> Optional[datetime]:
+def _parse_since(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
@@ -61,7 +60,7 @@ def _validate_args(args: argparse.Namespace, parser: argparse.ArgumentParser) ->
     return args
 
 
-def _compute_since(args: argparse.Namespace) -> Optional[datetime]:
+def _compute_since(args: argparse.Namespace) -> datetime | None:
     if args.since:
         return args.since
     if args.days:
