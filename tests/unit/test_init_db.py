@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from entities.mysql_config import MySQLConfig
-from use_cases.init_db import run_init_db
+from application.use_cases.init_db import run_init_db
 
 
 class FakeGateway:

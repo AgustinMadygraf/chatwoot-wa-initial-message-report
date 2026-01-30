@@ -8,7 +8,7 @@ from infrastructure.pymysql.mysql_admin_gateway import PyMySQLAdminGateway
 from interface_adapter.presenter.init_db_presenter import present_init_db
 from shared.config import get_env, load_env_file
 from shared.logger import get_logger
-from use_cases.init_db import run_init_db
+from application.use_cases.init_db import run_init_db
 
 
 def _get_args() -> argparse.Namespace:

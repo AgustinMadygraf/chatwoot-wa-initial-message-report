@@ -1,0 +1,13 @@
+from __future__ import annotations
+
+from typing import Protocol
+
+
+class UnitOfWorkPort(Protocol):
+    def __enter__(self) -> "UnitOfWorkPort": ...
+
+    def __exit__(self, exc_type, exc, tb) -> None: ...
+
+    def commit(self) -> None: ...
+
+    def rollback(self) -> None: ...

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from use_cases import health_check
+from application.use_cases import health_check
 
 
 class FakeChatwootClient:

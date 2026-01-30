@@ -66,6 +66,8 @@ def test_cli_health_screen(monkeypatch, capsys) -> None:
     monkeypatch.setattr(cli, "run_health_checks", lambda logger=None: {"ok": True})
     monkeypatch.setattr(cli, "print_health_screen", lambda results: print("HEALTH"))
     monkeypatch.setattr(sys, "argv", ["run_cli.py"])
+    choices = iter(["1", "0"])
+    monkeypatch.setattr(cli, "_show_menu", lambda: next(choices))
     cli.main()
     assert "HEALTH" in capsys.readouterr().out
 

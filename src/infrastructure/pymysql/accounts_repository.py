@@ -34,7 +34,7 @@ class AccountsRepository:
                     name,
                     locale,
                     status,
-                    created_at,
+                    created_at
                 FROM {TABLE_NAME}
                 ORDER BY id ASC
                 """

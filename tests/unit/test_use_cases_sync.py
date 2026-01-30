@@ -5,10 +5,10 @@ from typing import Any
 
 import requests
 
-from use_cases.accounts_sync import sync_account
-from use_cases.conversations_sync import _extract_conversations, sync_conversations
-from use_cases.inboxes_sync import _extract_inboxes, sync_inboxes
-from use_cases.messages_sync import _extract_messages, sync_messages
+from application.use_cases.accounts_sync import sync_account
+from application.use_cases.conversations_sync import _extract_conversations, sync_conversations
+from application.use_cases.inboxes_sync import _extract_inboxes, sync_inboxes
+from application.use_cases.messages_sync import _extract_messages, sync_messages
 
 
 class FakeAccountsRepo:
@@ -94,7 +94,15 @@ def test_sync_account_upserts_once() -> None:
     repo = FakeAccountsRepo()
     result = sync_account(client, repo)
     assert repo.ensure_called is True
-    assert repo.upserts == [client.account_payload]
+    assert repo.upserts == [
+        {
+            "id": 1,
+            "name": None,
+            "locale": None,
+            "status": None,
+            "created_at": None,
+        }
+    ]
     assert result["total_upserted"] == 1
 
 
@@ -105,6 +113,7 @@ def test_sync_inboxes_from_payload_list() -> None:
     result = sync_inboxes(client, repo)
     assert repo.ensure_called is True
     assert len(repo.upserts) == 2
+    assert repo.upserts[0]["id"] == 1
     assert result["total_upserted"] == 2
     assert list(_extract_inboxes({"data": [{"id": 3}]})) == [{"id": 3}]
 

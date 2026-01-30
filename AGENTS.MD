@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Contexto del proyecto
-- App con entrypoint CLI: `run_cli.py`.
+- App con entrypoint CLI: `run_cli.py` (o `run.bat`).
 - Arquitectura en capas dentro de `src/` (entities, use_cases, interface_adapter, infrastructure, shared).
 - Monolito modular orientado a extraer contextos en el futuro (Inventory/Ordering/Reporting).
 
@@ -10,6 +10,8 @@
 - El endpoint de estado debe informar conectividad a Chatwoot API y MySQL.
 - No acoplar dominio y casos de uso a frameworks (Clean Architecture).
 - UI/UX tipo AS/400 debe vivir como adaptador externo (CLI/TUI) sin contaminar dominio.
+- Sin argumentos, la CLI muestra menu AS/400 interactivo.
+- La UI ajusta ancho/alto automaticamente segun terminal y pagina con F8/F9 (N/P).
 
 ## Variables de entorno esperadas
 - `CHATWOOT_BASE_URL`
