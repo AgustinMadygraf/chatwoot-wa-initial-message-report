@@ -33,7 +33,11 @@ class Logger:
         if self.fmt == "json":
             _emit_json(entry)
         else:
-            print(f"[{ts}] {self.name} {level}: {message}")
+            extras_text = ""
+            if extras:
+                pairs = " ".join(f"{key}={value}" for key, value in extras.items())
+                extras_text = f" | {pairs}"
+            print(f"[{ts}] {self.name} {level}: {message}{extras_text}")
 
     def debug(self, message: str, **extras: dict) -> None:
         self._emit("DEBUG", message, **extras)

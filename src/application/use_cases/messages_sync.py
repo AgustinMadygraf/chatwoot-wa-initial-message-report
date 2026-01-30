@@ -20,6 +20,17 @@ def _extract_messages(payload: dict) -> Iterable[dict]:
     return []
 
 
+def _next_page(payload: dict, current_page: int) -> int | None:
+    meta = payload.get("meta")
+    if isinstance(meta, dict):
+        next_page = meta.get("next_page")
+        if isinstance(next_page, int):
+            return next_page
+        if next_page is None and "next_page" in meta:
+            return None
+    return current_page + 1
+
+
 def sync_messages(
     client: ChatwootClientPort,
     repo: MessagesRepositoryPort,
@@ -36,33 +47,54 @@ def sync_messages(
     for convo_id in conversation_ids:
         logger.debug("Mensajes: inicio conversacion", conversation_id=convo_id)
         page = 1
+        before: int | None = None
+        last_page_ids: tuple[int | None, int | None] | None = None
         while True:
             logger.debug(
                 "Mensajes: consultando pagina",
                 conversation_id=convo_id,
                 page=page,
+                before=before,
                 per_page=per_page,
             )
             try:
                 payload = client.list_conversation_messages(
-                    conversation_id=convo_id, page=page, per_page=per_page
+                    conversation_id=convo_id,
+                    page=page if before is None else None,
+                    per_page=per_page,
+                    before=before,
                 )
             except RequestException as exc:
                 errors += 1
                 logger.warning(f"Mensajes fallo en conversation {convo_id}, pagina {page}: {exc}")
                 break
-            except Exception as exc:  # noqa: BLE001
+            except (ValueError, KeyError, TypeError) as exc:
                 errors += 1
                 logger.warning(
                     f"Mensajes fallo inesperado en conversation {convo_id}, pagina {page}: {exc}"
                 )
                 break
+            logger.debug(
+                "Mensajes: payload meta",
+                conversation_id=convo_id,
+                page=page,
+                meta=payload.get("meta"),
+                payload_keys=list(payload.keys()),
+            )
             items = list(_extract_messages(payload))
+            page_ids = (
+                items[0].get("id") if items else None,
+                items[-1].get("id") if items else None,
+            )
             logger.debug(
                 "Mensajes: pagina recibida",
                 conversation_id=convo_id,
                 page=page,
                 count=len(items),
+                first_id=page_ids[0],
+                last_id=page_ids[1],
+                sample_sender_type=items[0].get("sender_type") if items else None,
+                sample_message_type=items[0].get("message_type") if items else None,
             )
             if not items:
                 logger.debug(
@@ -71,19 +103,47 @@ def sync_messages(
                     page=page,
                 )
                 break
+            if last_page_ids == page_ids:
+                logger.warning(
+                    "Mensajes: pagina repetida, deteniendo paginacion",
+                    conversation_id=convo_id,
+                    page=page,
+                    first_id=page_ids[0],
+                    last_id=page_ids[1],
+                )
+                if before is None and page_ids[0] is not None:
+                    logger.warning(
+                        "Mensajes: intentando paginacion por cursor (before)",
+                        conversation_id=convo_id,
+                        before=page_ids[0],
+                    )
+                    before = int(page_ids[0])
+                    last_page_ids = None
+                    continue
+                break
+            last_page_ids = page_ids
             for message in items:
                 model = Message.from_payload(message)
                 repo.upsert_message(model.to_record())
                 total += 1
-                logger.debug(
-                    "Mensajes: upsert",
-                    conversation_id=convo_id,
-                    message_id=model.id,
-                    total=total,
-                )
+            logger.debug(
+                "Mensajes: pagina upserted",
+                conversation_id=convo_id,
+                page=page,
+                total=total,
+                errors=errors,
+            )
             if progress:
                 progress(convo_id, total, errors)
-            page += 1
+            if before is not None:
+                before = int(page_ids[0]) if page_ids[0] is not None else None
+                if before is None:
+                    break
+            else:
+                next_page = _next_page(payload, page)
+                if next_page is None:
+                    break
+                page = next_page
         if progress:
             progress(convo_id, total, errors)
         logger.debug(

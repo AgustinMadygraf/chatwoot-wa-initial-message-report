@@ -34,4 +34,8 @@ class PyMySQLUnitOfWork(UnitOfWorkPort):
 
     def rollback(self) -> None:
         if self.connection is not None:
-            self.connection.rollback()
+            try:
+                self.connection.rollback()
+            except Exception:  # noqa: BLE001
+                # Connection may be already closed/interrupted; swallow rollback failure.
+                pass

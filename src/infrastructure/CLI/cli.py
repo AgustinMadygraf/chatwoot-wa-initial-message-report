@@ -178,24 +178,37 @@ def _handle_sync_messages_only(args, logger) -> None:
         conversations_repo.ensure_table()
         messages_repo.ensure_table()
         rows = conversations_repo.list_conversations()
+        rows = sorted(
+            rows,
+            key=lambda row: (
+                int(row.get("account_id") or 0),
+                int(row.get("inbox_id") or 0),
+                int(row.get("id") or 0),
+            ),
+        )
         conversation_ids = [int(row["id"]) for row in rows if row.get("id") is not None]
         if not conversation_ids:
             print("No hay conversaciones en MySQL. Ejecuta --sync primero.")
             return
 
         def _msg_progress(conversation_id: int, total: int, errors: int) -> None:
+            # Commit per page so partial progress is persisted on long runs.
+            uow.commit()
             print(
                 f"Mensajes conv {conversation_id} -> total {total} (errores {errors})"
             )
 
-        sync_messages(
-            client,
-            messages_repo,
-            conversation_ids,
-            logger=progress_logger,
-            per_page=args.per_page,
-            progress=_msg_progress,
-        )
+        try:
+            sync_messages(
+                client,
+                messages_repo,
+                conversation_ids,
+                logger=progress_logger,
+                per_page=args.per_page,
+                progress=_msg_progress,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(f"sync_messages error: {type(exc).__name__}: {exc!r}") from exc
     finished_at = datetime.now()
     print("Fin sync mensajes:", finished_at.isoformat(timespec="seconds"))
     print("Duracion:", finished_at - started_at)

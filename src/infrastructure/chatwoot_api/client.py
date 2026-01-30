@@ -48,14 +48,26 @@ class ChatwootClient:
         return cast(dict[str, Any], response.json())
 
     def list_conversation_messages(
-        self, *, conversation_id: int, page: int, per_page: int | None = None
+        self,
+        *,
+        conversation_id: int,
+        page: int | None = None,
+        per_page: int | None = None,
+        before: int | None = None,
+        after: int | None = None,
     ) -> dict[str, Any]:
         url = (
             f"{self._config.base_url.rstrip('/')}/api/v1/accounts/"
             f"{self._config.account_id}/conversations/{conversation_id}/messages"
         )
         headers = {"api_access_token": self._config.api_token}
-        params: dict[str, int] = {"page": page}
+        params: dict[str, int] = {}
+        if page is not None:
+            params["page"] = page
+        if before is not None:
+            params["before"] = before
+        if after is not None:
+            params["after"] = after
         if per_page:
             params["per_page"] = per_page
         response = requests.get(
