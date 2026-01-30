@@ -45,6 +45,7 @@ def print_conversations_table(conversations: Iterable[dict]) -> None:
     columns = [
         ("id", 6),
         ("inbox_id", 8),
+        ("address", 20),
         ("status", 10),
         ("meta__sender__id", 10),
         ("meta__sender__name", 16),

@@ -5,6 +5,8 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
+import pymysql.err
+
 TABLE_NAME = "3_conversations"
 
 CREATE_CONVERSATIONS_TABLE_SQL = f"""
@@ -51,7 +53,7 @@ class ConversationsRepository:
                 cursor.execute(
                     f"ALTER TABLE {TABLE_NAME} ADD COLUMN address VARCHAR(255)"
                 )
-            except Exception:
+            except pymysql.err.OperationalError:
                 pass
             self._ensure_index(cursor, "idx_account_id", "account_id")
             self._ensure_index(cursor, "idx_inbox_id", "inbox_id")
@@ -117,7 +119,7 @@ class ConversationsRepository:
     def _ensure_index(self, cursor, name: str, column: str) -> None:
         try:
             cursor.execute(f"CREATE INDEX {name} ON {TABLE_NAME} ({column})")
-        except Exception:
+        except pymysql.err.OperationalError:
             pass
 
     def _ensure_fk(
@@ -134,7 +136,7 @@ class ConversationsRepository:
                 f"ADD CONSTRAINT {name} FOREIGN KEY ({column}) "
                 f"REFERENCES {ref_table}({ref_column})"
             )
-        except Exception:
+        except pymysql.err.OperationalError:
             pass
 
     def _get_existing_columns(self) -> set[str]:
@@ -259,10 +261,19 @@ def _pick_address(payload: dict[str, Any]) -> str | None:
                 value = sender.get(key)
                 if isinstance(value, str) and value.strip():
                     return value.strip()
+            name = sender.get("name")
+            if isinstance(name, str) and name.strip():
+                return name.strip()
     sender = payload.get("sender")
     if isinstance(sender, dict):
         for key in ("phone_number", "email"):
             value = sender.get(key)
             if isinstance(value, str) and value.strip():
                 return value.strip()
+        name = sender.get("name")
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+    meta_sender_name = payload.get("meta__sender__name")
+    if isinstance(meta_sender_name, str) and meta_sender_name.strip():
+        return meta_sender_name.strip()
     return None

@@ -23,6 +23,36 @@ def _extract_conversations(payload: dict) -> Iterable[dict]:
             return nested
     return []
 
+def _pick_address_for_debug(payload: dict) -> str | None:
+    for key in ("phone_number", "email"):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    meta = payload.get("meta")
+    if isinstance(meta, dict):
+        sender = meta.get("sender")
+        if isinstance(sender, dict):
+            for key in ("phone_number", "email"):
+                value = sender.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+            name = sender.get("name")
+            if isinstance(name, str) and name.strip():
+                return name.strip()
+    sender = payload.get("sender")
+    if isinstance(sender, dict):
+        for key in ("phone_number", "email"):
+            value = sender.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        name = sender.get("name")
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+    meta_sender_name = payload.get("meta__sender__name")
+    if isinstance(meta_sender_name, str) and meta_sender_name.strip():
+        return meta_sender_name.strip()
+    return None
+
 
 def sync_conversations(
     client: ChatwootClientPort,
@@ -66,6 +96,7 @@ def sync_conversations(
                 account_id=convo.get("account_id"),
                 status=convo.get("status"),
                 sender=convo.get("meta", {}).get("sender") if isinstance(convo, dict) else None,
+                address=_pick_address_for_debug(convo),
             )
             repo.upsert_conversation(convo)
             conversation_ids.append(int(model.id))
