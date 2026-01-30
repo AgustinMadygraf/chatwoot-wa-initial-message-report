@@ -44,13 +44,12 @@ def print_conversations_table(conversations: Iterable[dict]) -> None:
     console = _console()
     columns = [
         ("id", 6),
+        ("account_id", 10),
         ("inbox_id", 8),
         ("address", 20),
-        ("status", 10),
-        ("meta__sender__id", 10),
-        ("meta__sender__name", 16),
         ("created_at", 19),
         ("last_activity_at", 19),
+        ("last_synced_at", 19),
     ]
     _render_table_paginated(
         console, "CONVERSACIONES", "MYSQL", columns, conversations, _row_from_raw

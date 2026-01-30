@@ -68,3 +68,6 @@ warn_return_any = true
 warn_unreachable = true
 show_error_codes = true
 explicit_package_bases = true
+
+[tool.pylint.MAIN]
+init-hook = "import sys; sys.path.append('src')"
