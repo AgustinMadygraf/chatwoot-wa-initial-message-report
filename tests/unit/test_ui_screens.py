@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from infrastructure.CLI import ui
+from infrastructure.AS400 import ui
 
 
 def test_print_tables_and_screens() -> None:

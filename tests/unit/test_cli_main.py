@@ -7,20 +7,6 @@ from typing import Any
 import infrastructure.CLI.cli as cli
 
 
-class DummyLive:
-    def __init__(self, *_args, **_kwargs) -> None:
-        pass
-
-    def __enter__(self) -> "DummyLive":
-        return self
-
-    def __exit__(self, exc_type, exc, tb) -> None:
-        return None
-
-    def update(self, *_args, **_kwargs) -> None:
-        return None
-
-
 class FakeRepo:
     def __init__(self, *_args, **_kwargs) -> None:
         self.ensure_called = False
@@ -88,11 +74,11 @@ def _set_env(monkeypatch) -> None:
 
 
 def test_cli_health_screen(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(cli, "run_health_checks", lambda *_args, **_kwargs: {"ok": True})
-    monkeypatch.setattr(cli, "print_health_screen", lambda results: print("HEALTH"))
+    monkeypatch.setattr(cli.as400_cli, "run_health_checks", lambda *_args, **_kwargs: {"ok": True})
+    monkeypatch.setattr(cli.as400_cli, "print_health_screen", lambda results: print("HEALTH"))
     monkeypatch.setattr(sys, "argv", ["run_cli.py"])
     choices = iter(["1", "0"])
-    monkeypatch.setattr(cli, "_show_menu", lambda: next(choices))
+    monkeypatch.setattr(cli.as400_cli, "_show_menu", lambda: next(choices))
     cli.main()
     assert "HEALTH" in capsys.readouterr().out
 
@@ -112,32 +98,38 @@ def test_cli_json_health(monkeypatch, capsys) -> None:
 def test_cli_list_inboxes(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--list-inboxes"])
-    monkeypatch.setattr(cli, "fetch_inboxes", lambda account_id: [{"id": 1, "account_id": account_id}])
-    monkeypatch.setattr(cli, "print_inboxes_table", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        cli.as400_cli,
+        "fetch_inboxes",
+        lambda account_id: [{"id": 1, "account_id": account_id}],
+    )
+    monkeypatch.setattr(cli.as400_cli, "print_inboxes_table", lambda *_args, **_kwargs: None)
     cli.main()
 
 
 def test_cli_list_conversations(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--list-conversations"])
-    monkeypatch.setattr(cli, "fetch_conversations", lambda: [{"id": 1}])
-    monkeypatch.setattr(cli, "print_conversations_table", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(cli.as400_cli, "fetch_conversations", lambda: [{"id": 1}])
+    monkeypatch.setattr(
+        cli.as400_cli, "print_conversations_table", lambda *_args, **_kwargs: None
+    )
     cli.main()
 
 
 def test_cli_list_messages(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--list-messages"])
-    monkeypatch.setattr(cli, "fetch_messages", lambda: [{"id": 99}])
-    monkeypatch.setattr(cli, "print_messages_table", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(cli.as400_cli, "fetch_messages", lambda: [{"id": 99}])
+    monkeypatch.setattr(cli.as400_cli, "print_messages_table", lambda *_args, **_kwargs: None)
     cli.main()
 
 
 def test_cli_list_accounts(monkeypatch) -> None:
     _set_env(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["run_cli.py", "--list-accounts"])
-    monkeypatch.setattr(cli, "fetch_accounts", lambda: [{"id": 1}])
-    monkeypatch.setattr(cli, "print_accounts_table", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(cli.as400_cli, "fetch_accounts", lambda: [{"id": 1}])
+    monkeypatch.setattr(cli.as400_cli, "print_accounts_table", lambda *_args, **_kwargs: None)
     cli.main()
 
 
@@ -150,9 +142,6 @@ def test_cli_sync(monkeypatch) -> None:
     monkeypatch.setattr(cli, "InboxesRepository", FakeRepo)
     monkeypatch.setattr(cli, "ConversationsRepository", FakeRepo)
     monkeypatch.setattr(cli, "MessagesRepository", FakeRepo)
-    monkeypatch.setattr(cli, "Live", DummyLive)
-    monkeypatch.setattr(cli, "build_sync_progress_screen", lambda *_args, **_kwargs: "screen")
-    monkeypatch.setattr(cli, "print_sync_screen", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(cli, "sync_account", lambda *_args, **_kwargs: {"total_upserted": 1})
     monkeypatch.setattr(cli, "sync_inboxes", lambda *_args, **_kwargs: {"total_upserted": 1})
     monkeypatch.setattr(cli, "sync_conversations", lambda *_args, **_kwargs: [1, 2])
@@ -254,9 +243,6 @@ def test_cli_sync_keyboard_interrupt(monkeypatch, capsys) -> None:
     monkeypatch.setattr(cli, "InboxesRepository", FakeRepo)
     monkeypatch.setattr(cli, "ConversationsRepository", FakeRepo)
     monkeypatch.setattr(cli, "MessagesRepository", FakeRepo)
-    monkeypatch.setattr(cli, "Live", DummyLive)
-    monkeypatch.setattr(cli, "build_sync_progress_screen", lambda *_args, **_kwargs: "screen")
-    monkeypatch.setattr(cli, "print_sync_screen", lambda *_args, **_kwargs: None)
 
     def _raise(*_args, **_kwargs):
         raise KeyboardInterrupt()
@@ -275,13 +261,13 @@ def test_cli_sync_exception(monkeypatch, capsys) -> None:
     monkeypatch.setattr(cli, "InboxesRepository", FakeRepo)
     monkeypatch.setattr(cli, "ConversationsRepository", FakeRepo)
     monkeypatch.setattr(cli, "MessagesRepository", FakeRepo)
-    monkeypatch.setattr(cli, "Live", DummyLive)
-    monkeypatch.setattr(cli, "build_sync_progress_screen", lambda *_args, **_kwargs: "screen")
-    monkeypatch.setattr(cli, "print_sync_screen", lambda *_args, **_kwargs: None)
 
     def _raise(*_args, **_kwargs):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(cli, "sync_account", _raise)
-    cli.main()
+    try:
+        cli.main()
+    except SystemExit:
+        pass
     assert "Sync fallo" in capsys.readouterr().out

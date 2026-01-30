@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from typing import Callable, Iterable
 
 from textual.app import App, ComposeResult
@@ -128,7 +129,7 @@ class As400App(App):
         self.current_key: str | None = None
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True, tall=False, id="header")
+        yield Header(show_clock=True, id="header")
         yield Container(DataTable(id="table"), Static("", id="status"))
         yield Footer()
 
@@ -195,5 +196,5 @@ class As400App(App):
             self._refresh_table()
 
     def action_show_help(self) -> None:
-        status = self.query_one(Static, id="status")
+        status = self.query_one("#status", Static)
         status.update("F1=Help  F3=Salir  F5=Refresh  F8=Siguiente  F9=Anterior")

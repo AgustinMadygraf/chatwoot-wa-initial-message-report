@@ -148,4 +148,9 @@ def _pick_address(payload: dict[str, Any]) -> str | None:
         value = payload.get(key)
         if isinstance(value, str) and value.strip():
             return value.strip()
+    channel_type = payload.get("channel_type")
+    if isinstance(channel_type, str) and channel_type.endswith("WebWidget"):
+        website_url = payload.get("website_url")
+        if isinstance(website_url, str) and website_url.strip():
+            return website_url.strip()
     return None

@@ -60,6 +60,9 @@ def test_inboxes_flatten_payload_address_priority() -> None:
     payload = {"email": "x@y", "bot_name": "bot"}
     flattened = inboxes._flatten_payload(payload, account_id=5)
     assert flattened["address"] == "x@y"
+    payload = {"channel_type": "Channel::WebWidget", "website_url": " https://example.com "}
+    flattened = inboxes._flatten_payload(payload, account_id=5)
+    assert flattened["address"] == "https://example.com"
 
 
 def test_inboxes_repository_upsert_executes_sql() -> None:

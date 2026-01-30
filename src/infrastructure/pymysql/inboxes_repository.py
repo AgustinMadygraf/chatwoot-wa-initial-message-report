@@ -68,17 +68,20 @@ def _flatten_payload(payload: dict[str, Any], *, account_id: int) -> dict[str, A
     channel_type = payload.get("channel_type")
     if isinstance(channel_type, str) and channel_type.startswith("Channel::"):
         channel_type = channel_type.replace("Channel::", "", 1)
+    address = payload.get("address")
+    if not (isinstance(address, str) and address.strip()):
+        address = _choose_address(payload, channel_type=channel_type)
     return {
         "id": payload.get("id"),
         "account_id": account_id,
         "name": payload.get("name"),
         "channel_type": channel_type,
-        "address": _choose_address(payload),
+        "address": address.strip() if isinstance(address, str) else address,
         "last_synced_at": now,
     }
 
 
-def _choose_address(payload: dict[str, Any]) -> str | None:
+def _choose_address(payload: dict[str, Any], *, channel_type: str | None) -> str | None:
     phone = payload.get("phone_number")
     if isinstance(phone, str) and phone.strip():
         return phone.strip()
@@ -88,4 +91,8 @@ def _choose_address(payload: dict[str, Any]) -> str | None:
     bot_name = payload.get("bot_name")
     if isinstance(bot_name, str) and bot_name.strip():
         return bot_name.strip()
+    if channel_type == "WebWidget":
+        website_url = payload.get("website_url")
+        if isinstance(website_url, str) and website_url.strip():
+            return website_url.strip()
     return None

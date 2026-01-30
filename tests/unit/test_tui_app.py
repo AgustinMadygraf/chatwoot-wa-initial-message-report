@@ -1,4 +1,4 @@
-from infrastructure.tui.app import As400App
+from infrastructure.AS400.tui.app import As400App
 
 
 def test_tui_app_loads() -> None:
