@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from src.infrastructure.chatwoot_api.client import ChatwootClient
-from src.infrastructure.pymysql.inboxes_repository import InboxesRepository
-from src.shared.logger import Logger, get_logger
+from infrastructure.chatwoot_api.client import ChatwootClient
+from infrastructure.pymysql.inboxes_repository import InboxesRepository
+from shared.logger import Logger, get_logger
 
 
 def _extract_inboxes(payload: dict) -> Iterable[dict]:

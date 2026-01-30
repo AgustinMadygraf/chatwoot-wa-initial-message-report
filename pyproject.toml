@@ -27,6 +27,7 @@ dev = [
   "black>=24.0",
   "mypy>=1.8",
   "types-requests>=2.31",
+  "types-PyMySQL>=1.1",
 ]
 
 [tool.setuptools]
@@ -65,3 +66,4 @@ warn_redundant_casts = true
 warn_return_any = true
 warn_unreachable = true
 show_error_codes = true
+explicit_package_bases = true

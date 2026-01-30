@@ -4,9 +4,9 @@ from collections.abc import Callable, Iterable
 
 from requests import RequestException
 
-from src.infrastructure.chatwoot_api.client import ChatwootClient
-from src.infrastructure.pymysql.messages_repository import MessagesRepository
-from src.shared.logger import Logger, get_logger
+from infrastructure.chatwoot_api.client import ChatwootClient
+from infrastructure.pymysql.messages_repository import MessagesRepository
+from shared.logger import Logger, get_logger
 
 
 def _extract_messages(payload: dict) -> Iterable[dict]:

@@ -347,12 +347,14 @@ def _format_datetime_cell(key: str, raw: object) -> str:
     if raw is None:
         return ""
     if key in ("created_at", "last_activity_at"):
-        try:
-            ts = int(raw)
-        except (TypeError, ValueError):
-            return str(raw)
-        dt = datetime.fromtimestamp(ts, tz=timezone(timedelta(hours=-3)))
-        return dt.strftime("%Y-%m-%d %H:%M:%S")
+        if isinstance(raw, (int, str)):
+            try:
+                ts = int(raw)
+            except ValueError:
+                return str(raw)
+            dt = datetime.fromtimestamp(ts, tz=timezone(timedelta(hours=-3)))
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        return str(raw)
     return str(raw)
 
 

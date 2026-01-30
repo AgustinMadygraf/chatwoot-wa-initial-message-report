@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pymysql
 
-from src.entities.mysql_config import MySQLConfig
-from src.interface_adapter.gateways.mysql_admin_gateway import MySQLAdminGateway
+from entities.mysql_config import MySQLConfig
+from interface_adapter.gateways.mysql_admin_gateway import MySQLAdminGateway
 
 
 class PyMySQLAdminGateway(MySQLAdminGateway):

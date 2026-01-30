@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from src.infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
-from src.infrastructure.mysql.connection import MySQLConfig
-from src.infrastructure.mysql.connection import check_connection as check_mysql
-from src.shared.config import get_env
-from src.shared.logger import Logger, get_logger
+from infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
+from infrastructure.mysql.connection import MySQLConfig
+from infrastructure.mysql.connection import check_connection as check_mysql
+from shared.config import get_env
+from shared.logger import Logger, get_logger
 
 
 def _build_chatwoot_config() -> ChatwootClientConfig | None:

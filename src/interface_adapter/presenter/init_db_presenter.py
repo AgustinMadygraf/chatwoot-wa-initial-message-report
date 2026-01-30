@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.use_cases.init_db import InitDbResult
+from use_cases.init_db import InitDbResult
 
 
 def present_init_db(result: InitDbResult) -> str:

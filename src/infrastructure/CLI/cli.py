@@ -7,13 +7,15 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Mapping
 from datetime import datetime
+from typing import Any, cast
 
 from rich.live import Live
 
-from src.entities.mysql_config import MySQLConfig
-from src.infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
-from src.infrastructure.CLI.ui import (
+from entities.mysql_config import MySQLConfig
+from infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
+from infrastructure.CLI.ui import (
     build_sync_progress_screen,
     print_accounts_table,
     print_conversations_table,
@@ -22,18 +24,18 @@ from src.infrastructure.CLI.ui import (
     print_messages_table,
     print_sync_screen,
 )
-from src.infrastructure.pymysql.accounts_repository import AccountsRepository
-from src.infrastructure.pymysql.connection import get_mysql_connection
-from src.infrastructure.pymysql.conversations_repository import ConversationsRepository
-from src.infrastructure.pymysql.inboxes_repository import InboxesRepository
-from src.infrastructure.pymysql.messages_repository import MessagesRepository
-from src.shared.config import get_env, load_env_file
-from src.shared.logger import get_logger
-from src.use_cases.accounts_sync import sync_account
-from src.use_cases.conversations_sync import sync_conversations
-from src.use_cases.health_check import run_health_checks
-from src.use_cases.inboxes_sync import sync_inboxes
-from src.use_cases.messages_sync import sync_messages
+from infrastructure.pymysql.accounts_repository import AccountsRepository
+from infrastructure.pymysql.connection import get_mysql_connection
+from infrastructure.pymysql.conversations_repository import ConversationsRepository
+from infrastructure.pymysql.inboxes_repository import InboxesRepository
+from infrastructure.pymysql.messages_repository import MessagesRepository
+from shared.config import get_env, load_env_file
+from shared.logger import get_logger
+from use_cases.accounts_sync import sync_account
+from use_cases.conversations_sync import sync_conversations
+from use_cases.health_check import run_health_checks
+from use_cases.inboxes_sync import sync_inboxes
+from use_cases.messages_sync import sync_messages
 
 
 def _get_args() -> argparse.Namespace:
@@ -71,9 +73,9 @@ def _get_args() -> argparse.Namespace:
 
 def _require_env(name: str) -> str:
     value = get_env(name)
-    if not value:
+    if value is None or value == "":
         raise ValueError(f"Missing env var: {name}")
-    return value
+    return str(value)
 
 
 def main() -> None:
@@ -231,7 +233,7 @@ def main() -> None:
         started_at = datetime.now()
         progress_logger = logger if args.debug else get_logger("cli", level="WARNING")
 
-        sync_stats = {"phase": "accounts"}
+        sync_stats: dict[str, object] = {"phase": "accounts"}
 
         def _update_live() -> None:
             live.update(build_sync_progress_screen(sync_stats, started_at=started_at))
@@ -301,7 +303,7 @@ def main() -> None:
         return
     print("Estado general:", "OK" if results["ok"] else "ERROR")
     for key in ("chatwoot", "mysql"):
-        item = results[key]
+        item = cast(Mapping[str, Any], results[key])
         status = "OK" if item["ok"] else "ERROR"
         detail = f" - {item.get('error')}" if item.get("error") else ""
         print(f"{key}: {status}{detail}")

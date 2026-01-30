@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pymysql
 
-from src.entities.mysql_config import MySQLConfig
+from entities.mysql_config import MySQLConfig
 
 
 def get_mysql_connection(config: MySQLConfig) -> pymysql.connections.Connection:

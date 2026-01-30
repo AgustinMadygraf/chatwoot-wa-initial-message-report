@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from src.infrastructure.chatwoot_api.client import ChatwootClient
-from src.infrastructure.pymysql.accounts_repository import AccountsRepository
-from src.shared.logger import Logger, get_logger
+from infrastructure.chatwoot_api.client import ChatwootClient
+from infrastructure.pymysql.accounts_repository import AccountsRepository
+from shared.logger import Logger, get_logger
 
 
 def sync_account(

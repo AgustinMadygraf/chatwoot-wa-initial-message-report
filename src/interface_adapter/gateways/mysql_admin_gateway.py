@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from src.entities.mysql_config import MySQLConfig
+from entities.mysql_config import MySQLConfig
 
 
 class MySQLAdminGateway(Protocol):

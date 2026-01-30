@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from src.entities.mysql_config import MySQLConfig
-from src.interface_adapter.gateways.mysql_admin_gateway import MySQLAdminGateway
-from src.shared.logger import Logger, get_logger
+from entities.mysql_config import MySQLConfig
+from interface_adapter.gateways.mysql_admin_gateway import MySQLAdminGateway
+from shared.logger import Logger, get_logger
 
 
 @dataclass(frozen=True)
