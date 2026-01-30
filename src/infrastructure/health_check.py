@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from application.ports.health_check import HealthCheckPort
+from application.ports.health_check import HealthCheckPort, HealthCheckResults, HealthServiceStatus
 from infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
 from infrastructure.pymysql.health import MySQLConfig, check_connection as check_mysql
 from shared.config import get_env
@@ -30,8 +30,12 @@ class EnvironmentHealthCheck(HealthCheckPort):
         port = int(port_raw) if port_raw else 3306
         return MySQLConfig(host=host, user=user, password=password, database=database, port=port)
 
-    def check(self) -> dict:
-        results: dict = {"chatwoot": None, "mysql": None}
+    def check(self) -> HealthCheckResults:
+        results: HealthCheckResults = {
+            "ok": False,
+            "chatwoot": {"ok": False, "error": "Sin verificar"},
+            "mysql": {"ok": False, "error": "Sin verificar"},
+        }
 
         chatwoot_config = self._build_chatwoot_config()
         if chatwoot_config:

@@ -7,11 +7,14 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections.abc import Mapping
 from datetime import datetime
-from typing import Any, cast
+from typing import cast
 
 from rich.live import Live
+from rich.console import Console
+from rich.table import Table
+from rich import box
+from rich.text import Text
 
 from entities.mysql_config import MySQLConfig
 from infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
@@ -35,15 +38,18 @@ from infrastructure.pymysql.fetchers import (
 from infrastructure.pymysql.inboxes_repository import InboxesRepository
 from infrastructure.pymysql.messages_repository import MessagesRepository
 from infrastructure.pymysql.unit_of_work import PyMySQLUnitOfWork
+from infrastructure.health_check import EnvironmentHealthCheck
+from infrastructure.tui.app import As400App
 from shared.config import get_env, load_env_file
 from shared.logger import get_logger
 from application.use_cases.accounts_sync import sync_account
 from application.use_cases.conversations_sync import sync_conversations
 from application.use_cases.health_check import run_health_checks
+from application.ports.health_check import HealthCheckResults, HealthServiceStatus
 from application.use_cases.inboxes_sync import sync_inboxes
 from application.use_cases.messages_sync import sync_messages
-from infrastructure.health_check import EnvironmentHealthCheck
-from infrastructure.tui.app import As400App
+
+
 
 
 def _get_args() -> argparse.Namespace:
@@ -88,22 +94,32 @@ def _require_env(name: str) -> str:
 
 
 def _show_menu() -> str:
-    print("\n" + "=" * 60)
-    print("MENU PRINCIPAL (AS/400)")
-    print("=" * 60)
-    print("1) Estado general")
-    print("2) Listar cuentas")
-    print("3) Listar inboxes")
-    print("4) Listar conversaciones")
-    print("5) Listar mensajes")
-    print("6) Sincronizar")
-    print("0) Salir")
-    return input("Seleccion: ").strip()
+    console = Console()
+    console.print()
+    table = Table(
+        box=box.SIMPLE,
+        show_lines=False,
+        title="MENU PRINCIPAL (AS/400)",
+        title_style="bold green",
+        width=min(80, console.size.width - 4),
+    )
+    table.add_column("OPCION", justify="right", width=8, style="bold cyan")
+    table.add_column("DESCRIPCION", style="green")
+    table.add_row("1", "Estado general / health check")
+    table.add_row("2", "Listar cuentas")
+    table.add_row("3", "Listar inboxes")
+    table.add_row("4", "Listar conversaciones")
+    table.add_row("5", "Listar mensajes")
+    table.add_row("6", "Sincronizar todo")
+    table.add_row("0", "Salir")
+    console.print(table)
+    console.print(Text("Seleccion: ", style="bold yellow"), end="")
+    return input().strip()
 
 
 def _handle_health(logger) -> None:
     checker = EnvironmentHealthCheck(logger=logger)
-    results = run_health_checks(checker, logger=logger)
+    results = cast(HealthCheckResults, run_health_checks(checker, logger=logger))
     print_health_screen(results)
 
 
@@ -207,7 +223,7 @@ def _handle_sync(args, logger) -> None:
                 sync_stats["phase"] = "cancelado"
                 _update_live()
                 print("\nSync cancelado por el usuario.")
-            except Exception as exc:  # noqa: BLE001
+            except (ValueError, RuntimeError) as exc:
                 sync_stats["phase"] = "error"
                 _update_live()
                 print(f"\nSync fallo: {exc}")
@@ -215,6 +231,7 @@ def _handle_sync(args, logger) -> None:
 
 
 def main() -> None:
+    "Punto de entrada para la aplicacion CLI."
     load_env_file()
     if len(sys.argv) == 1:
         logger = get_logger("cli", level="INFO")
@@ -238,7 +255,7 @@ def main() -> None:
                     _handle_sync(args, logger)
                 else:
                     print("Opcion invalida.")
-            except Exception as exc:  # noqa: BLE001
+            except (ValueError, RuntimeError, KeyboardInterrupt) as exc:
                 print(f"Error: {exc}")
         return
 
@@ -264,13 +281,13 @@ def main() -> None:
         sys.exit(1)
 
     if args.tui:
-        As400App().run(title="Chatwoot AS/400 TUI")
+        As400App().run()
         return
 
     if args.list_inboxes:
         try:
             _handle_list_inboxes()
-        except Exception as exc:  # noqa: BLE001
+        except (ValueError, RuntimeError) as exc:
             print(f"Listar inboxes fallo: {exc}")
             sys.exit(1)
         return
@@ -278,7 +295,7 @@ def main() -> None:
     if args.list_conversations:
         try:
             _handle_list_conversations()
-        except Exception as exc:  # noqa: BLE001
+        except (ValueError, RuntimeError) as exc:
             print(f"Listar conversaciones fallo: {exc}")
             sys.exit(1)
         return
@@ -286,7 +303,7 @@ def main() -> None:
     if args.list_messages:
         try:
             _handle_list_messages()
-        except Exception as exc:  # noqa: BLE001
+        except (ValueError, RuntimeError) as exc:
             print(f"Listar mensajes fallo: {exc}")
             sys.exit(1)
         return
@@ -294,7 +311,7 @@ def main() -> None:
     if args.list_accounts:
         try:
             _handle_list_accounts()
-        except Exception as exc:  # noqa: BLE001
+        except (ValueError, RuntimeError) as exc:
             print(f"Listar cuentas fallo: {exc}")
             sys.exit(1)
         return
@@ -302,7 +319,7 @@ def main() -> None:
     if args.sync:
         try:
             _handle_sync(args, logger)
-        except Exception as exc:  # noqa: BLE001
+        except (ValueError, RuntimeError, KeyboardInterrupt) as exc:
             print(f"Sync fallo: {exc}")
             sys.exit(1)
         return
@@ -314,7 +331,7 @@ def main() -> None:
         return
     print("Estado general:", "OK" if results["ok"] else "ERROR")
     for key in ("chatwoot", "mysql"):
-        item = cast(Mapping[str, Any], results[key])
+        item: HealthServiceStatus = results[key]
         status = "OK" if item["ok"] else "ERROR"
         detail = f" - {item.get('error')}" if item.get("error") else ""
         print(f"{key}: {status}{detail}")
