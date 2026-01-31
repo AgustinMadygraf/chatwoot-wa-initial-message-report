@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+import inspect
 
 from requests import RequestException
 
@@ -41,6 +42,7 @@ def sync_messages(
 ) -> dict[str, int]:
     logger = logger or get_logger("messages")
     repo.ensure_table()
+    supports_before = _supports_param(client.list_conversation_messages, "before")
 
     total = 0
     errors = 0
@@ -58,12 +60,19 @@ def sync_messages(
                 per_page=per_page,
             )
             try:
-                payload = client.list_conversation_messages(
-                    conversation_id=convo_id,
-                    page=page if before is None else None,
-                    per_page=per_page,
-                    before=before,
-                )
+                if supports_before:
+                    payload = client.list_conversation_messages(
+                        conversation_id=convo_id,
+                        page=page if before is None else None,
+                        per_page=per_page,
+                        before=before,
+                    )
+                else:
+                    payload = client.list_conversation_messages(
+                        conversation_id=convo_id,
+                        page=page,
+                        per_page=per_page,
+                    )
             except RequestException as exc:
                 errors += 1
                 logger.warning(f"Mensajes fallo en conversation {convo_id}, pagina {page}: {exc}")
@@ -111,7 +120,7 @@ def sync_messages(
                     first_id=page_ids[0],
                     last_id=page_ids[1],
                 )
-                if before is None and page_ids[0] is not None:
+                if supports_before and before is None and page_ids[0] is not None:
                     logger.warning(
                         "Mensajes: intentando paginacion por cursor (before)",
                         conversation_id=convo_id,
@@ -143,7 +152,7 @@ def sync_messages(
             )
             if progress:
                 progress(convo_id, total, errors)
-            if before is not None:
+            if supports_before and before is not None:
                 before = int(page_ids[0]) if page_ids[0] is not None else None
                 if before is None:
                     break
@@ -163,3 +172,13 @@ def sync_messages(
 
     logger.info(f"Mensajes sincronizados: {total}")
     return {"total_upserted": total, "total_errors": errors}
+
+
+def _supports_param(func: Callable[..., object], name: str) -> bool:
+    try:
+        params = inspect.signature(func).parameters
+    except (TypeError, ValueError):
+        return False
+    if name in params:
+        return True
+    return any(param.kind == param.VAR_KEYWORD for param in params.values())

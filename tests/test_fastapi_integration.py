@@ -1,18 +1,25 @@
-from fastapi.testclient import TestClient
+import httpx
+import pytest
 
 from src.interface_adapter.presenters.webhook_api import app
 
 
-def test_webhook_rejects_bad_secret(monkeypatch):
+@pytest.mark.anyio
+async def test_webhook_rejects_bad_secret(monkeypatch):
     from src.shared import config
 
     monkeypatch.setattr(config, "WEBHOOK_SECRET", "expected")
-    client = TestClient(app)
-    resp = client.post("/webhook/bad", json={"event": "message_created", "message_type": "incoming"})
-    assert resp.status_code == 401
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        resp = await client.post(
+            "/webhook/bad",
+            json={"event": "message_created", "message_type": "incoming"},
+        )
+        assert resp.status_code == 401
 
 
-def test_webhook_accepts_incoming(monkeypatch):
+@pytest.mark.anyio
+async def test_webhook_accepts_incoming(monkeypatch):
     from src.shared import config
 
     monkeypatch.setattr(config, "WEBHOOK_SECRET", "expected")
@@ -32,14 +39,15 @@ def test_webhook_accepts_incoming(monkeypatch):
 
     monkeypatch.setattr(rasa_http.RasaHTTPGateway, "send_message", _fake_rasa)
 
-    client = TestClient(app)
-    payload = {
-        "event": "message_created",
-        "message_type": "incoming",
-        "account": {"id": 1},
-        "conversation": {"id": 2},
-        "content": "hola",
-    }
-    resp = client.post("/webhook/expected", json=payload)
-    assert resp.status_code == 200
-    assert resp.json()["ok"] is True
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        payload = {
+            "event": "message_created",
+            "message_type": "incoming",
+            "account": {"id": 1},
+            "conversation": {"id": 2},
+            "content": "hola",
+        }
+        resp = await client.post("/webhook/expected", json=payload)
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True

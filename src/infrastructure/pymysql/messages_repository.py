@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import json
+import re
 from typing import Any
+
+import pymysql.err
 
 TABLE_NAME = "4_messages"
 
@@ -85,9 +89,10 @@ class MessagesRepository:
             return list(cursor.fetchall() or [])
 
     def upsert_message(self, payload: dict[str, Any]) -> None:
-        flattened = _flatten_payload(payload)
+        flattened, _dynamic = _flatten_payload(payload)
+        record = {key: flattened[key] for key in BASE_COLUMNS if key in flattened}
 
-        columns = list(flattened.keys())
+        columns = list(record.keys())
         insert_cols = ", ".join(columns)
         placeholders = ", ".join([f"%({col})s" for col in columns])
         update_cols = ", ".join([f"{col}=VALUES({col})" for col in columns if col != "id"])
@@ -97,12 +102,12 @@ class MessagesRepository:
             ON DUPLICATE KEY UPDATE {update_cols}
         """
         with self.connection.cursor() as cursor:
-            cursor.execute(sql, flattened)
+            cursor.execute(sql, record)
 
     def _drop_extra_columns(self, cursor) -> None:
         try:
             cursor.execute(f"SHOW COLUMNS FROM {TABLE_NAME}")
-        except Exception:  # noqa: BLE001
+        except pymysql.err.OperationalError:
             return
         rows = cursor.fetchall() or []
         existing = {row["Field"] for row in rows}
@@ -110,7 +115,7 @@ class MessagesRepository:
         for column in extras:
             try:
                 cursor.execute(f"ALTER TABLE {TABLE_NAME} DROP COLUMN {column}")
-            except Exception:  # noqa: BLE001
+            except pymysql.err.OperationalError:
                 pass
 
     def _ensure_column(self, cursor, name: str, column_type: str) -> None:
@@ -118,17 +123,17 @@ class MessagesRepository:
             cursor.execute(f"SHOW COLUMNS FROM {TABLE_NAME} LIKE %s", (name,))
             if cursor.fetchone():
                 return
-        except Exception:  # noqa: BLE001
+        except pymysql.err.OperationalError:
             return
         try:
             cursor.execute(f"ALTER TABLE {TABLE_NAME} ADD COLUMN {name} {column_type}")
-        except Exception:  # noqa: BLE001
+        except pymysql.err.OperationalError:
             pass
 
     def _ensure_index(self, cursor, name: str, column: str) -> None:
         try:
             cursor.execute(f"CREATE INDEX {name} ON {TABLE_NAME} ({column})")
-        except Exception:  # noqa: BLE001
+        except pymysql.err.OperationalError:
             pass
 
     def _ensure_fk(
@@ -145,13 +150,13 @@ class MessagesRepository:
                 f"ADD CONSTRAINT {name} FOREIGN KEY ({column}) "
                 f"REFERENCES {ref_table}({ref_column})"
             )
-        except Exception:  # noqa: BLE001
+        except pymysql.err.OperationalError:
             pass
 
 
-def _flatten_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def _flatten_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     now = datetime.now(tz=timezone.utc).replace(tzinfo=None)
-    return {
+    base = {
         "id": payload.get("id"),
         "conversation_id": payload.get("conversation_id"),
         "inbox_id": payload.get("inbox_id"),
@@ -160,3 +165,51 @@ def _flatten_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "created_at": payload.get("created_at"),
         "last_synced_at": now,
     }
+    dynamic = _flatten_dynamic(payload, exclude=BASE_COLUMNS)
+    flattened = {**base, **dynamic}
+    return flattened, dynamic
+
+
+def _flatten_dynamic(payload: dict[str, Any], *, exclude: set[str]) -> dict[str, Any]:
+    dynamic: dict[str, Any] = {}
+
+    def visit(prefix: str, value: Any) -> None:
+        if isinstance(value, dict):
+            for key, nested in value.items():
+                visit(_join_key(prefix, key), nested)
+            return
+        column = _safe_column(prefix)
+        if column in exclude:
+            return
+        dynamic[column] = _stringify_value(value)
+
+    for key, value in payload.items():
+        if key in exclude:
+            continue
+        visit(str(key), value)
+
+    return dynamic
+
+
+def _join_key(prefix: str, key: Any) -> str:
+    if not prefix:
+        return str(key)
+    return f"{prefix}__{key}"
+
+
+def _stringify_value(value: Any) -> Any:
+    if isinstance(value, (dict, list, tuple)):
+        try:
+            return json.dumps(value, ensure_ascii=True)
+        except (TypeError, ValueError):
+            return str(value)
+    return value
+
+
+def _safe_column(value: str) -> str:
+    safe = re.sub(r"[^a-zA-Z0-9_]", "_", value).strip("_")
+    if not safe:
+        return "field"
+    if safe[0].isdigit():
+        safe = f"field_{safe}"
+    return safe.lower()
