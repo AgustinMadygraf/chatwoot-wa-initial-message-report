@@ -1,31 +1,22 @@
 # chatwoot-wa-initial-message-report
 
-CLI/TUI estilo AS/400 para verificar Chatwoot y MySQL y sincronizar cuentas, inboxes,
-conversaciones y mensajes hacia MySQL.
+Repositorio unificado con:
+- CLI/TUI estilo AS/400 para health check y sync de Chatwoot hacia MySQL.
+- Bridge FastAPI entre Chatwoot y Rasa (webhook).
+- Scripts para correr/entrenar Rasa y abrir tunel ngrok.
 
-## Que hace
-- Health check de Chatwoot API y MySQL (`--json` disponible).
-- Sincronizacion completa o solo mensajes usando conversaciones ya guardadas en MySQL.
-- Listados rapidos desde MySQL (accounts, inboxes, conversations, messages).
-- Menu AS/400 sin argumentos y TUI opcional (`--tui`).
-- Wrapper `run.bat` para Windows y entrypoint `run_cli.py`.
+## Entrypoints
+- `python run_chatwoot_sync.py` (CLI/TUI de sync y health check).
+- `python run_chatwoot_rasa_bridge.py` (servidor FastAPI del webhook).
+- `python run_rasa_server.py` (levanta Rasa).
+- `python run_rasa_train.py` (entrena modelo Rasa).
+- `python run_ngrok_tunnel.py` (abre tunel ngrok).
 
 ## Requisitos
 - Python 3.10.11
 - MySQL/MariaDB accesible desde la maquina donde corre la CLI.
+- `ngrok` CLI disponible en PATH para `run_ngrok_tunnel.py`.
 - Opcional: `textual` para `--tui` (`python -m pip install textual`).
-
-## Configuracion (.env)
-- `CHATWOOT_BASE_URL`
-- `CHATWOOT_ACCOUNT_ID`
-- `CHATWOOT_API_ACCESS_TOKEN`
-- `MYSQL_HOST`
-- `MYSQL_USER`
-- `MYSQL_PASSWORD`
-- `MYSQL_DB`
-- `MYSQL_PORT` (opcional, default 3306)
-
-Copia `.env.example` a `.env` y ajusta los valores.
 
 ## Instalacion
 ```bash
@@ -34,14 +25,32 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-## Uso rapido
-- `python run_cli.py` abre el menu AS/400 en terminal.
-- `python run_cli.py --json` ejecuta el health check.
-- `python run_cli.py --sync [--per-page N]` baja cuentas, inboxes, conversaciones y mensajes.
-- `python run_cli.py --sync-messages [--per-page N] [--test ID]` solo mensajes usando las conversaciones guardadas.
+## Configuracion (.env)
+### Sync Chatwoot -> MySQL
+- `CHATWOOT_BASE_URL`
+- `CHATWOOT_ACCOUNT_ID`
+- `CHATWOOT_API_ACCESS_TOKEN`
+- `MYSQL_HOST`
+- `MYSQL_USER`
+- `MYSQL_PASSWORD`
+- `MYSQL_DB`
+- `MYSQL_PORT` (opcional, default 3306)
+- `DEBUG_INBOXES=1` (opcional, log del payload de inboxes)
+
+### Bridge / Rasa / Ngrok
+- Los valores se encuentran hardcodeados en `src/shared/config.py`.
+- Si necesitas cambiarlos, modifica ese archivo.
+
+Opcional:
+- `LOG_FORMAT=json` para logging estructurado.
+
+## Uso rapido (Chatwoot sync)
+- `python run_chatwoot_sync.py` abre el menu AS/400 en terminal.
+- `python run_chatwoot_sync.py --json` ejecuta el health check.
+- `python run_chatwoot_sync.py --sync [--per-page N]` baja cuentas, inboxes, conversaciones y mensajes.
+- `python run_chatwoot_sync.py --sync-messages [--per-page N] [--test ID]` solo mensajes usando las conversaciones guardadas.
 - Listados: `--list-accounts`, `--list-inboxes`, `--list-conversations`, `--list-messages`.
-- `python run_cli.py --tui` abre la interfaz TUI (requiere `textual`).
-- En Windows: `run.bat --list-accounts` (usa la venv si existe).
+- `python run_chatwoot_sync.py --tui` abre la interfaz TUI (requiere `textual`).
 
 ### Opciones del CLI
 - `--json`: health check en JSON (solo aplica cuando no hay otra accion).
@@ -59,6 +68,42 @@ python -m pip install -r requirements.txt
 - F8/F9 pagina tablas.
 - 1-4 cambia dataset (cuentas, inboxes, conversaciones, mensajes).
 
+## Bridge Chatwoot <-> Rasa
+- Endpoint: `POST /webhook/{secret}`.
+- Valida `secret` contra `WEBHOOK_SECRET`.
+- Procesa solo eventos `message_created` con `message_type = incoming`.
+- Si Rasa responde texto, usa el primer mensaje; si no, responde `"Bot no activado"`.
+- Si el payload no trae contenido, responde `"Ok"`.
+
+Ejemplo de payload:
+```json
+{
+  "event": "message_created",
+  "message_type": "incoming",
+  "account": { "id": 1 },
+  "conversation": { "id": 123 },
+  "content": "Hola"
+}
+```
+
+Ejemplo de respuesta:
+```json
+{
+  "ok": true,
+  "status": 200,
+  "detail": "..."
+}
+```
+
+## Rasa
+- El proyecto Rasa vive en `src/infrastructure/rasa` (config.yml, domain.yml, data/, models/).
+- `run_rasa_server.py` ejecuta `rasa run --enable-api --cors *` con el puerto derivado de `RASA_BASE_URL`.
+- `run_rasa_train.py` ejecuta `rasa train` dentro de `src/infrastructure/rasa`.
+
+## Ngrok
+- `run_ngrok_tunnel.py` ejecuta `ngrok http <PORT> --domain <domain>`.
+- El dominio se extrae desde `URL_WEBHOOK`.
+
 ## Tablas creadas en MySQL
 - `1_accounts`
 - `2_inboxes`
@@ -69,20 +114,6 @@ python -m pip install -r requirements.txt
 - La base de datos debe existir antes de sincronizar.
 - Permisos: CREATE TABLE, INSERT, UPDATE, SELECT.
 - Las tablas se crean con DEFAULT CHARSET=utf8mb4.
-
-### Credenciales Chatwoot
-- La API usa el header `api_access_token` con `CHATWOOT_API_ACCESS_TOKEN`.
-- El `CHATWOOT_ACCOUNT_ID` se usa en la URL `/api/v1/accounts/{id}`.
-
-## Notas de arquitectura
-- Entrada por `run_cli.py` (o `run.bat`), que delega en `interface_adapter.controllers.cli`.
-- Capas separadas (domain / application / interface_adapter / infrastructure) para mantener Clean Architecture y habilitar la futura extraccion de contextos.
-
-## Flujo sugerido
-1) Copia `.env.example` a `.env` y completa credenciales.
-2) `python run_cli.py --json` para validar Chatwoot y MySQL.
-3) `python run_cli.py --sync` para poblar las tablas.
-4) Usa listados o la TUI (`--tui`) para navegar datos.
 
 ## Tests
 - `pytest`

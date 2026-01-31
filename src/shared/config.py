@@ -20,6 +20,18 @@ class ChatwootConfig:
     data_dir: str = "data"
 
 
+# Hardcoded defaults for bridge / Rasa / ngrok.
+CHATWOOT_BASE_URL: str = "https://chatwoot.example.com"
+CHATWOOT_BOT_TOKEN: str = "replace_me"
+WEBHOOK_SECRET: str = "replace_me"
+BRIDGE_HOST: str = "0.0.0.0"
+PORT: int = 8000
+RELOAD: bool = False
+RASA_BASE_URL: str = "http://localhost:5005"
+RASA_REST_URL: str = "http://localhost:5005/webhooks/rest/webhook"
+URL_WEBHOOK: str = "https://example.ngrok-free.app/webhook"
+
+
 def load_env_file(path: str = ".env") -> None:
     """Load simple KEY=VALUE pairs from a .env file into the process env.
 

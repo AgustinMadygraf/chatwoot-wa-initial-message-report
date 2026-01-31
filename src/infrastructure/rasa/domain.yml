@@ -1,0 +1,21 @@
+version: "3.1"
+
+intents:
+  - saludo
+  - despedida
+  - pedir_mas_informacion
+  - start
+
+responses:
+  utter_saludo:
+    - text: "Hola! Soy MadyBot. Te ayudo con bolsas de papel personalizadas."
+  utter_despedida:
+    - text: "Gracias por contactar a MadyBot. Hasta luego!"
+  utter_mas_informacion:
+    - text: "Buen dia! Gracias por escribirnos a MadyBot. Para cotizar, necesitamos medidas, cantidad y si requiere impresion."
+  utter_default:
+    - text: "No entiendo, en breve se comunicará un vendedor humano."
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

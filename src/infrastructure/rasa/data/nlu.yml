@@ -1,0 +1,28 @@
+version: "3.1"
+
+nlu:
+  - intent: saludo
+    examples: |
+      - hola
+      - buenas
+      - buen dia
+      - buenas tardes
+
+  - intent: despedida
+    examples: |
+      - chau
+      - adios
+      - hasta luego
+      - nos vemos
+
+  - intent: pedir_mas_informacion
+    examples: |
+      - quiero mas informacion
+      - necesito mas detalles
+      - me podes pasar mas info
+      - quisiera mas informacion
+
+  - intent: start
+    examples: |
+      - /start
+      - /inicio

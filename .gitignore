@@ -11,3 +11,5 @@ __pycache__/
 !.env.example
 /data/*.csv
 .coverage
+src/infrastructure/rasa/.rasa/
+src/infrastructure/rasa/models/*.tar.gz
