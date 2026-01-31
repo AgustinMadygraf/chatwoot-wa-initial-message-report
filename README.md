@@ -110,8 +110,21 @@ Ejemplo de respuesta:
 
 ## Reporte de intenciones
 - Requiere Rasa corriendo con API (`rasa run --enable-api`).
-- Usa `/model/parse` para inferir intenciones sobre los mensajes guardados en MySQL.
-- Ejemplo: `python run_intent_coverage_report.py --min-count 5`.
+- Usa `/model/parse` para inferir intenciones sobre los mensajes guardados en MySQL (tabla `4_messages`).
+- El script lee `src/infrastructure/rasa/data/nlu.yml` por defecto, pero puedes pasar `--nlu-file` para otro YAML.
+- Tipos de ejecución:
+  - `python run_intent_coverage_report.py --min-count 5` muestra cuántos mensajes cayeron en cada intención entrenada y qué intenciones quedan por encima o debajo del umbral configurado.
+  - `--parse-url` sobrescribe `RASA_PARSE_URL`.
+  - `--timeout` ajusta el timeout de la solicitud a Rasa.
+  - `--debug` activa logs más verbosos.
+-  - `--limit N` procesa solo los primeros `N` mensajes para obtener un reporte rápido sin recorrer toda la tabla.
+-  - `--samples N` muestra los primeros N textos junto con la intención inferida y la confianza para que puedas inspeccionar ejemplos reales.
+- Variables de configuración adicionales:
+  - `RASA_PARSE_URL` (si no está, se arma como `RASA_BASE_URL` + `/model/parse`).
+  - `INTENT_MIN_COUNT` (default 5) se usa cuando no pusiste `--min-count`.
+- `INTENT_PROGRESS_EVERY` (default 200) controla con qué frecuencia el parser imprime progreso.
+- `INTENT_SCAN_PROGRESS_EVERY` (default 5000) controla el log de mensajes procesados.
+- El report muestra: totaales de parseos, porcentaje de mensajes con intención explícita, las intenciones entrenadas con su `Count/Pct/Status`, cuáles están por debajo del umbral, las intenciones no definidas en `nlu.yml` y (si pedís `--samples`) unos ejemplos de texto + intención + confianza.
 
 ## Ngrok
 - `run_ngrok_tunnel.py` ejecuta `ngrok http <PORT>`.

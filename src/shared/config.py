@@ -72,6 +72,18 @@ def get_port() -> int:
         return PORT
 
 
+def get_rasa_parse_url() -> str:
+    """Return the configured URL to hit `/model/parse` on the Rasa server."""
+
+    parse_url = get_env("RASA_PARSE_URL")
+    if parse_url:
+        return parse_url
+    base = get_env("RASA_BASE_URL")
+    if not base:
+        base = RASA_BASE_URL
+    return f"{base.rstrip('/')}/model/parse"
+
+
 def build_mysql_config() -> MySQLConfig:
     host = get_env("MYSQL_HOST")
     user = get_env("MYSQL_USER")

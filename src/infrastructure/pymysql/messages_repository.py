@@ -71,10 +71,9 @@ class MessagesRepository:
                 "id",
             )
 
-    def list_messages(self) -> list[dict[str, Any]]:
+    def list_messages(self, limit: int | None = None) -> list[dict[str, Any]]:
         with self.connection.cursor() as cursor:
-            cursor.execute(
-                f"""
+            sql = f"""
                 SELECT
                     id,
                     conversation_id,
@@ -84,8 +83,12 @@ class MessagesRepository:
                     content
                 FROM {TABLE_NAME}
                 ORDER BY inbox_id ASC, conversation_id ASC, created_at ASC, last_synced_at ASC
-                """
-            )
+            """
+            params: tuple[int] | tuple[()] = ()
+            if limit is not None:
+                sql = f"{sql}\nLIMIT %s"
+                params = (limit,)
+            cursor.execute(sql, params)
             return list(cursor.fetchall() or [])
 
     def upsert_message(self, payload: dict[str, Any]) -> None:
