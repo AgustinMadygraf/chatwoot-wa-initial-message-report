@@ -8,6 +8,7 @@ Repositorio unificado con:
 ## Entrypoints
 - `python run_chatwoot_sync.py` (CLI/TUI de sync y health check).
 - `python run_chatwoot_rasa_bridge.py` (servidor FastAPI del webhook).
+- `python run_intent_coverage_report.py` (reporte de intenciones desde MySQL).
 - `python run_rasa_server.py` (levanta Rasa).
 - `python run_rasa_train.py` (entrena modelo Rasa).
 - `python run_ngrok_tunnel.py` (abre tunel ngrok).
@@ -38,8 +39,15 @@ python -m pip install -r requirements.txt
 - `DEBUG_INBOXES=1` (opcional, log del payload de inboxes)
 
 ### Bridge / Rasa / Ngrok
-- Los valores se encuentran hardcodeados en `src/shared/config.py`.
-- Si necesitas cambiarlos, modifica ese archivo.
+- `WEBHOOK_SECRET`
+- `PORT` (bridge)
+- `URL_WEBHOOK` (ngrok)
+- `RASA_BASE_URL`
+- `RASA_REST_URL` (opcional, override de `RASA_BASE_URL` para webhook REST)
+- `RASA_PARSE_URL` (opcional, override para `/model/parse`)
+- `INTENT_MIN_COUNT` (opcional, default 5)
+- `INTENT_PROGRESS_EVERY` (opcional, default 200)
+- `INTENT_SCAN_PROGRESS_EVERY` (opcional, default 5000)
 
 Opcional:
 - `LOG_FORMAT=json` para logging estructurado.
@@ -99,6 +107,11 @@ Ejemplo de respuesta:
 - El proyecto Rasa vive en `src/infrastructure/rasa` (config.yml, domain.yml, data/, models/).
 - `run_rasa_server.py` ejecuta `rasa run --enable-api --cors *` con el puerto derivado de `RASA_BASE_URL`.
 - `run_rasa_train.py` ejecuta `rasa train` dentro de `src/infrastructure/rasa`.
+
+## Reporte de intenciones
+- Requiere Rasa corriendo con API (`rasa run --enable-api`).
+- Usa `/model/parse` para inferir intenciones sobre los mensajes guardados en MySQL.
+- Ejemplo: `python run_intent_coverage_report.py --min-count 5`.
 
 ## Ngrok
 - `run_ngrok_tunnel.py` ejecuta `ngrok http <PORT>`.
