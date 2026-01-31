@@ -12,7 +12,7 @@ class WebhookController:
         self.usecase = usecase
 
     async def handle(self, secret: str, request: Request):
-        if secret != config.WEBHOOK_SECRET:
+        if secret != config.get_webhook_secret():
             logger.warning(
                 "Unauthorized webhook attempt",
                 secret_length=len(secret or ""),

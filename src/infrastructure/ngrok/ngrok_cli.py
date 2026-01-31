@@ -15,8 +15,8 @@ LOCAL_API_BASE = "http://127.0.0.1:4040"
 
 class NgrokCliTunnel(NgrokTunnel):
     def __init__(self, port: int | None = None, url_webhook: str | None = None):
-        self.port = port if port is not None else config.PORT
-        self.url_webhook = url_webhook or config.URL_WEBHOOK
+        self.port = port if port is not None else config.get_port()
+        self.url_webhook = url_webhook or config.get_url_webhook()
 
     def _extract_domain(self) -> str:
         raw = (self.url_webhook or "").strip()

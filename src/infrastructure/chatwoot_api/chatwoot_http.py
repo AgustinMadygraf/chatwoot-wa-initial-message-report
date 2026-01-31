@@ -16,8 +16,10 @@ class ChatwootHTTPAdapter(ChatwootGateway):
         timeout: int = 10,
         client: HttpxClient | None = None,
     ):
-        self.base_url = base_url or config.CHATWOOT_BASE_URL
-        self.token = token or config.CHATWOOT_BOT_TOKEN
+        env_base_url = config.get_env("CHATWOOT_BASE_URL")
+        env_token = config.get_env("CHATWOOT_BOT_TOKEN") or config.get_env("CHATWOOT_API_ACCESS_TOKEN")
+        self.base_url = base_url or env_base_url or config.CHATWOOT_BASE_URL
+        self.token = token or env_token or config.CHATWOOT_BOT_TOKEN
         self.timeout = timeout
         self.client = client or HttpxClient(timeout=timeout)
 

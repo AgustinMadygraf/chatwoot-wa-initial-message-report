@@ -101,8 +101,8 @@ Ejemplo de respuesta:
 - `run_rasa_train.py` ejecuta `rasa train` dentro de `src/infrastructure/rasa`.
 
 ## Ngrok
-- `run_ngrok_tunnel.py` ejecuta `ngrok http <PORT> --domain <domain>`.
-- El dominio se extrae desde `URL_WEBHOOK`.
+- `run_ngrok_tunnel.py` ejecuta `ngrok http <PORT>`.
+- Si `URL_WEBHOOK` tiene dominio, agrega `--domain <domain>` (requiere plan pago).
 
 ## Tablas creadas en MySQL
 - `1_accounts`

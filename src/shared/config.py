@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 from entities.mysql_config import MySQLConfig
 
@@ -29,7 +28,7 @@ PORT: int = 8000
 RELOAD: bool = False
 RASA_BASE_URL: str = "http://localhost:5005"
 RASA_REST_URL: str = "http://localhost:5005/webhooks/rest/webhook"
-URL_WEBHOOK: str = "https://example.ngrok-free.app/webhook"
+URL_WEBHOOK: str = ""
 
 
 def load_env_file(path: str = ".env") -> None:
@@ -53,6 +52,24 @@ def load_env_file(path: str = ".env") -> None:
 
 def get_env(name: str, default: str | None = None) -> str | None:
     return os.getenv(name, default)
+
+
+def get_webhook_secret() -> str:
+    secret = get_env("WEBHOOK_SECRET")
+    return secret if secret else WEBHOOK_SECRET
+
+
+def get_url_webhook() -> str:
+    url = get_env("URL_WEBHOOK")+"/webhook/"
+    return url if url else URL_WEBHOOK
+
+
+def get_port() -> int:
+    raw = get_env("PORT")
+    try:
+        return int(raw) if raw else PORT
+    except ValueError:
+        return PORT
 
 
 def build_mysql_config() -> MySQLConfig:
