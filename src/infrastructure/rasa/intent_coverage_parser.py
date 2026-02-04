@@ -17,6 +17,19 @@ class RasaIntentCoverageParser(IntentCoverageParserPort):
         self._timeout = timeout
         self._logger = logger or get_logger("intent-coverage-parser")
 
+    @property
+    def url(self) -> str:
+        return self._url
+
+    def preflight(self, *, text: str = "hola", timeout: float | None = None) -> None:
+        """Validate Rasa availability with a single parse request."""
+        response = requests.post(
+            self._url,
+            json={"text": text},
+            timeout=self._timeout if timeout is None else timeout,
+        )
+        response.raise_for_status()
+
     def parse_text(self, text: str) -> IntentPrediction:
         response = requests.post(self._url, json={"text": text}, timeout=self._timeout)
         response.raise_for_status()

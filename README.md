@@ -119,12 +119,14 @@ Ejemplo de respuesta:
   - `--debug` activa logs más verbosos.
 -  - `--limit N` procesa solo los primeros `N` mensajes para obtener un reporte rápido sin recorrer toda la tabla.
 -  - `--samples N` muestra los primeros N textos junto con la intención inferida y la confianza para que puedas inspeccionar ejemplos reales.
+-  - `--conversation-summary N` muestra hasta N conversaciones con su intención dominante/fallback y el último texto parseado.
 - Variables de configuración adicionales:
   - `RASA_PARSE_URL` (si no está, se arma como `RASA_BASE_URL` + `/model/parse`).
   - `INTENT_MIN_COUNT` (default 5) se usa cuando no pusiste `--min-count`.
 - `INTENT_PROGRESS_EVERY` (default 200) controla con qué frecuencia el parser imprime progreso.
 - `INTENT_SCAN_PROGRESS_EVERY` (default 5000) controla el log de mensajes procesados.
 - El report muestra: totaales de parseos, porcentaje de mensajes con intención explícita, las intenciones entrenadas con su `Count/Pct/Status`, cuáles están por debajo del umbral, las intenciones no definidas en `nlu.yml` y (si pedís `--samples`) unos ejemplos de texto + intención + confianza.
+- Ha sumado un resumen por conversación con datos clave (intención top, fallback %, último texto), activable con `--conversation-summary`.
 
 ## Ngrok
 - `run_ngrok_tunnel.py` ejecuta `ngrok http <PORT>`.
