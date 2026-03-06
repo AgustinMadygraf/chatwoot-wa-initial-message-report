@@ -6,7 +6,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from src.entities.chatwoot_contacts_result import ChatwootContactsResult, ContactRow
-from src.infrastructure.cli.rich.presenters import (
+from src.infrastructure.rich.presenters import (
     RichConnectionPresenter,
     RichContactsPresenter,
 )

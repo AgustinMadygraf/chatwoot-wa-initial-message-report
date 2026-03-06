@@ -1,7 +1,7 @@
 import typer
 from rich.console import Console
 
-from src.infrastructure.cli.rich.runtime import RichCliRuntime
+from src.infrastructure.rich.runtime import RichCliRuntime
 from src.interface_adapter.cli.app import create_app
 
 

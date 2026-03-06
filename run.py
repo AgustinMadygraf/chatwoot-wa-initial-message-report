@@ -1,8 +1,5 @@
-from src.infrastructure.cli.rich.app_factory import build_app
-
-
-app = build_app()
+from src.infrastructure.uvicorn.main import run_cli
 
 
 if __name__ == "__main__":
-    app()
+    run_cli()

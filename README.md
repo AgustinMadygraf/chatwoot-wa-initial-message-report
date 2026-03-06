@@ -41,3 +41,22 @@ Si aparece `CERTIFICATE_VERIFY_FAILED`, el servidor Chatwoot probablemente no es
 
 Opciones:
 1. Recomendado: completar `certs/chatwoot-ca-bundle.pem` con la CA/intermedios correctos.
+
+## Replica local de contrato (FastAPI)
+Endpoints implementados para testing local:
+- `GET /health`
+- `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/inboxes`
+- `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/contacts?page=N`
+
+Arranque:
+- `python3 run_local_chatwoot_mock.py`
+
+Configuracion sugerida para la CLI contra mock:
+- `CHATWOOT_BASE_URL=http://127.0.0.1:8001`
+- `CHATWOOT_ACCOUNT_ID=1`
+- `CHATWOOT_API_ACCESS_TOKEN=local-token`
+
+Token del mock:
+- Header requerido: `api_access_token`
+- Valor esperado por defecto: `local-token`
+- Opcional: override con `CHATWOOT_MOCK_API_ACCESS_TOKEN`
