@@ -49,14 +49,12 @@ Endpoints implementados para testing local:
 - `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/contacts?page=N`
 
 Arranque:
-- `python3 run_local_chatwoot_mock.py`
+- `python3 run_fastapi.py`
 
 Configuracion sugerida para la CLI contra mock:
 - `CHATWOOT_BASE_URL=http://127.0.0.1:8001`
 - `CHATWOOT_ACCOUNT_ID=1`
-- `CHATWOOT_API_ACCESS_TOKEN=local-token`
+- `CHATWOOT_API_ACCESS_TOKEN=cualquier_valor`
 
-Token del mock:
-- Header requerido: `api_access_token`
-- Valor esperado por defecto: `local-token`
-- Opcional: override con `CHATWOOT_MOCK_API_ACCESS_TOKEN`
+Autenticacion en mock local:
+- No requiere token para pruebas locales.

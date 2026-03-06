@@ -1,12 +1,11 @@
 import json
-import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, Query, Request
+from fastapi.responses import RedirectResponse
 
 PAGE_SIZE = 15
-DEFAULT_TOKEN = "local-token"
 ROOT_DIR = Path(__file__).resolve().parents[3]
 CONTACTS_FIXTURE = ROOT_DIR / "data" / "all_contacts.json"
 
@@ -23,14 +22,6 @@ CONTACTS = _load_contacts()
 app = FastAPI(title="Chatwoot Local Contract Mock", version="1.0.0")
 
 
-def _require_token(api_access_token: str | None) -> None:
-    expected = os.getenv("CHATWOOT_MOCK_API_ACCESS_TOKEN", DEFAULT_TOKEN)
-    if not api_access_token:
-        raise HTTPException(status_code=401, detail="api_access_token requerido")
-    if api_access_token != expected:
-        raise HTTPException(status_code=403, detail="api_access_token invalido")
-
-
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -39,9 +30,7 @@ def health() -> dict[str, str]:
 @app.get("/api/v1/accounts/{account_id}/inboxes")
 def get_inboxes(
     account_id: int,
-    api_access_token: str | None = Header(default=None, convert_underscores=False),
 ) -> list[dict[str, Any]]:
-    _require_token(api_access_token)
     return [
         {
             "id": 2,
@@ -55,11 +44,14 @@ def get_inboxes(
 
 @app.get("/api/v1/accounts/{account_id}/contacts")
 def get_contacts(
+    request: Request,
     account_id: int,
-    page: int = Query(default=1, ge=1),
-    api_access_token: str | None = Header(default=None, convert_underscores=False),
+    page: int | None = Query(default=None, ge=1),
 ) -> dict[str, Any]:
-    _require_token(api_access_token)
+    if page is None:
+        target_url = str(request.url.include_query_params(page=1))
+        return RedirectResponse(url=target_url, status_code=307)
+
     start = (page - 1) * PAGE_SIZE
     end = start + PAGE_SIZE
     payload = CONTACTS[start:end]
