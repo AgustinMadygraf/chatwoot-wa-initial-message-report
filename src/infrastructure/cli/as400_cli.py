@@ -17,7 +17,7 @@ from rich import box
 from rich.text import Text
 
 from entities.mysql_config import MySQLConfig
-from infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
+from infrastructure.requests.chatwoot_client import ChatwootClient, ChatwootClientConfig
 from infrastructure.cli.ui import (
     build_sync_progress_screen,
     print_accounts_table,

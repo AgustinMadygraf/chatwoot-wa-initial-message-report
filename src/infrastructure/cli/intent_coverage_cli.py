@@ -3,13 +3,9 @@ from __future__ import annotations
 import argparse
 import sys
 
-import requests
-
 from use_cases.intent_coverage_report import IntentCoverageReportUseCase
 from infrastructure.pymysql.message_reader import MySQLMessageReader
 from infrastructure.pymysql.unit_of_work import PyMySQLUnitOfWork
-from infrastructure.rasa.intent_coverage_parser import RasaIntentCoverageParser
-from infrastructure.rasa.nlu_loader import load_nlu_intents
 from interface_adapter.presenters.intent_coverage_presenter import format_intent_coverage
 from infrastructure.settings.config import build_mysql_config, get_env, load_env_file
 from infrastructure.logging.logger import get_logger
@@ -58,6 +54,10 @@ def _int_env(name: str, default: int, logger) -> int:
 
 
 def main() -> None:
+    print("Intent coverage report is disabled because RASA was removed.", file=sys.stderr)
+    sys.exit(1)
+
+    # Legacy implementation kept below intentionally unreachable.
     load_env_file()
     args = _get_args()
     logger = get_logger("intent-coverage-cli", level="DEBUG" if args.debug else "INFO")

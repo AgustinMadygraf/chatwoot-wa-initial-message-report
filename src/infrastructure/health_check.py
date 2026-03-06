@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from use_cases.ports.health_check import HealthCheckPort, HealthCheckResults, HealthServiceStatus
-from infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
+from infrastructure.requests.chatwoot_client import ChatwootClient, ChatwootClientConfig
 from infrastructure.pymysql.health import MySQLConfig, check_connection as check_mysql
 from infrastructure.settings.config import get_env
 from infrastructure.logging.logger import Logger, get_logger

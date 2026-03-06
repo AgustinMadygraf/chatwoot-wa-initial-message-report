@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 
 from entities.mysql_config import MySQLConfig
-from infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
+from infrastructure.requests.chatwoot_client import ChatwootClient, ChatwootClientConfig
 from infrastructure.pymysql.accounts_repository import AccountsRepository
 from infrastructure.pymysql.conversations_repository import ConversationsRepository
 from infrastructure.pymysql.inboxes_repository import InboxesRepository

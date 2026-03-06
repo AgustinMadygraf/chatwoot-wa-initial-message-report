@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import infrastructure.chatwoot_api.client as client_mod
+import infrastructure.requests.chatwoot_client as client_mod
 
 
 class FakeResponse:

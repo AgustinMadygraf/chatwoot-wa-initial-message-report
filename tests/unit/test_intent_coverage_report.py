@@ -4,7 +4,6 @@ from typing import Any, Iterable
 
 from use_cases.ports.intent_coverage import IntentCoverageParserPort, IntentPrediction
 from use_cases.intent_coverage_report import IntentCoverageReportUseCase
-from infrastructure.rasa.nlu_loader import load_nlu_intents
 
 
 class _StubParser(IntentCoverageParserPort):
@@ -98,22 +97,3 @@ def test_samples_limit_is_respected() -> None:
     assert report.samples[1].intent is None
     assert report.samples[1].is_fallback is True
 
-
-def test_load_nlu_intents(tmp_path) -> None:
-    content = """
-version: "3.1"
-nlu:
-  - intent: saludo
-    examples: |
-      - hola
-  - intent: despedida
-  - intent: saludo
-  - intent: 
-    examples: |
-      - 
-"""
-    path = tmp_path / "nlu.yml"
-    path.write_text(content, encoding="utf-8")
-    intents = load_nlu_intents(path)
-
-    assert intents == ("saludo", "despedida")
