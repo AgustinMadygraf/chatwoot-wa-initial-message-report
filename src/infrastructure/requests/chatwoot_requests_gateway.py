@@ -52,6 +52,19 @@ class ChatwootRequestsGateway:
                 endpoint,
                 headers=headers,
                 timeout=self._settings.timeout_seconds,
+                verify=self._settings.tls_verify,
+            )
+        except requests.exceptions.SSLError as exc:
+            return ChatwootConnectionResult(
+                ok=False,
+                status_code=None,
+                endpoint=endpoint,
+                detail=(
+                    "Fallo la verificacion SSL/TLS del servidor. "
+                    "Configura CHATWOOT_CA_BUNDLE con el certificado CA/intermedio "
+                    "o usa CHATWOOT_TLS_VERIFY=false solo para pruebas. "
+                    f"Detalle tecnico: {exc}. ({network_diag})"
+                ),
             )
         except requests.exceptions.Timeout:
             return ChatwootConnectionResult(

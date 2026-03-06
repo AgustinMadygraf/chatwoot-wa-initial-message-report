@@ -15,8 +15,10 @@ Variables requeridas:
 - `CHATWOOT_ACCOUNT_ID` (entero)
 - `CHATWOOT_API_ACCESS_TOKEN`
 
-Variables opcionales:
-- `CHATWOOT_TIMEOUT_SECONDS` (default `8`)
+Valores hardcodeados en codigo:
+- `CHATWOOT_TIMEOUT_SECONDS=8`
+- `CHATWOOT_TLS_VERIFY=true`
+- `CHATWOOT_CA_BUNDLE=certs/chatwoot-ca-bundle.pem`
 
 ## Resultado esperado
 - Exit code `0`: conectividad y autenticacion validas
@@ -24,3 +26,9 @@ Variables opcionales:
 
 El chequeo consulta:
 - `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/inboxes`
+
+## Troubleshooting SSL
+Si aparece `CERTIFICATE_VERIFY_FAILED`, el servidor Chatwoot probablemente no este enviando bien la cadena completa o usa una CA no disponible localmente.
+
+Opciones:
+1. Recomendado: completar `certs/chatwoot-ca-bundle.pem` con la CA/intermedios correctos.
