@@ -4,6 +4,7 @@ Validador de conectividad a la API de Chatwoot con base de arquitectura limpia.
 
 ## Entrypoint
 - `python3 run.py`
+- `python3 run.py contacts`
 
 ## Requisitos
 - Python 3.10+
@@ -26,6 +27,9 @@ Valores hardcodeados en codigo:
 
 El chequeo consulta:
 - `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/inboxes`
+
+El reporte de contactos consulta:
+- `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/contacts`
 
 ## Troubleshooting SSL
 Si aparece `CERTIFICATE_VERIFY_FAILED`, el servidor Chatwoot probablemente no este enviando bien la cadena completa o usa una CA no disponible localmente.

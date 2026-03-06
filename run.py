@@ -5,12 +5,19 @@ from rich.table import Table
 
 from src.infrastructure.requests.chatwoot_requests_gateway import ChatwootRequestsGateway
 from src.infrastructure.settings.env_settings import load_chatwoot_settings
+from src.interface_adapter.controllers.fetch_contacts_controller import (
+    FetchContactsController,
+)
 from src.interface_adapter.controllers.validate_connection_controller import (
     ValidateConnectionController,
+)
+from src.interface_adapter.presenters.rich_contacts_presenter import (
+    RichContactsPresenter,
 )
 from src.interface_adapter.presenters.rich_connection_presenter import (
     RichConnectionPresenter,
 )
+from src.use_case.fetch_chatwoot_contacts import FetchChatwootContactsUseCase
 from src.use_case.validate_chatwoot_connection import ValidateChatwootConnectionUseCase
 
 APP_NAME = "chatwoot-connection-cli"
@@ -62,6 +69,42 @@ def main() -> int:
         return 1
 
 
+def contacts_main() -> int:
+    try:
+        with console.status(
+            "[cyan]Consultando contactos en Chatwoot...[/cyan]", spinner="dots"
+        ):
+            settings = load_chatwoot_settings()
+            gateway = ChatwootRequestsGateway(settings=settings)
+            use_case = FetchChatwootContactsUseCase(gateway=gateway)
+            presenter = RichContactsPresenter(
+                console=console, accent_color=ACCENT_COLOR
+            )
+            controller = FetchContactsController(use_case=use_case, presenter=presenter)
+            return controller.run()
+    except ValueError as exc:
+        console.print(
+            Panel(
+                f"[red]{exc}[/red]\n[yellow]Hint:[/yellow] revisa variables requeridas en .env.",
+                title="[bold red]Error de Configuracion[/bold red]",
+                border_style="red",
+            )
+        )
+        return 1
+    except Exception as exc:  # pragma: no cover
+        console.print(
+            Panel(
+                (
+                    f"[red]{exc}[/red]\n"
+                    "[yellow]Hint:[/yellow] revisa conectividad y permisos del token."
+                ),
+                title="[bold red]Error Inesperado[/bold red]",
+                border_style="red",
+            )
+        )
+        return 1
+
+
 @app.callback(invoke_without_command=True)
 def root(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is None:
@@ -73,6 +116,13 @@ def root(ctx: typer.Context) -> None:
 def check() -> None:
     """Ejecuta validacion de conectividad y token."""
     exit_code = main()
+    raise typer.Exit(code=exit_code)
+
+
+@app.command("contacts")
+def contacts() -> None:
+    """Consulta y muestra una pagina de contactos."""
+    exit_code = contacts_main()
     raise typer.Exit(code=exit_code)
 
 
