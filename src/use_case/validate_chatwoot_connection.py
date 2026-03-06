@@ -1,5 +1,5 @@
 from src.entities.chatwoot_connection_result import ChatwootConnectionResult
-from src.interface_adapter.gateways.chatwoot_api_gateway import ChatwootApiGateway
+from src.use_case.gateways.chatwoot_api_gateway import ChatwootApiGateway
 
 
 class ValidateChatwootConnectionUseCase:
