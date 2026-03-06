@@ -1,13 +1,13 @@
 from fastapi import FastAPI, Request
 
-from src.infrastructure.chatwoot_api.chatwoot_http import ChatwootHTTPAdapter
+from src.infrastructure.requests.chatwoot_gateway import ChatwootRequestsGateway
 from src.infrastructure.memory.in_memory_conversation_store import InMemoryConversationStore
 from src.use_cases.handle_incoming import HandleIncomingMessageUseCase
 from src.interface_adapter.controllers.webhook_controller import WebhookController
 
 app = FastAPI()
 
-adapter = ChatwootHTTPAdapter()
+adapter = ChatwootRequestsGateway()
 store = InMemoryConversationStore()
 usecase = HandleIncomingMessageUseCase(adapter, store=store)
 controller = WebhookController(usecase)

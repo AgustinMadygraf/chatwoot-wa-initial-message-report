@@ -8,7 +8,7 @@ from src.infrastructure.logging.logger import get_logger
 logger = get_logger(__name__)
 
 
-class ChatwootHTTPAdapter(ChatwootGateway):
+class ChatwootRequestsGateway(ChatwootGateway):
     def __init__(
         self,
         base_url: str | None = None,

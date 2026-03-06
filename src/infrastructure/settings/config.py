@@ -5,8 +5,6 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from entities.mysql_config import MySQLConfig
-
 
 @dataclass
 class ChatwootConfig:
@@ -62,21 +60,3 @@ def get_port() -> int:
         return int(raw) if raw else PORT
     except ValueError:
         return PORT
-
-
-def build_mysql_config() -> MySQLConfig:
-    host = get_env("MYSQL_HOST")
-    user = get_env("MYSQL_USER")
-    password = get_env("MYSQL_PASSWORD")
-    database = get_env("MYSQL_DB")
-    port_raw = get_env("MYSQL_PORT")
-    if not host or not user or not password or not database:
-        raise ValueError("Missing MySQL env vars")
-    port = int(port_raw) if port_raw else 3306
-    return MySQLConfig(
-        host=host,
-        user=user,
-        password=password,
-        database=database,
-        port=port,
-    )

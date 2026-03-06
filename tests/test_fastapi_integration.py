@@ -26,12 +26,12 @@ async def test_webhook_accepts_incoming(monkeypatch):
     monkeypatch.setattr(config, "CHATWOOT_BASE_URL", "https://example.com")
     monkeypatch.setattr(config, "CHATWOOT_BOT_TOKEN", "token")
 
-    from src.infrastructure.chatwoot_api import chatwoot_http
+    from src.infrastructure.requests import chatwoot_gateway
 
     async def _fake_send(self, account_id, conversation_id, content):
         return 200, "ok"
 
-    monkeypatch.setattr(chatwoot_http.ChatwootHTTPAdapter, "send_message", _fake_send)
+    monkeypatch.setattr(chatwoot_gateway.ChatwootRequestsGateway, "send_message", _fake_send)
 
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:

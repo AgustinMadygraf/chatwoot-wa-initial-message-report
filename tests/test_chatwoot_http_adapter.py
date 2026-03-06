@@ -1,6 +1,6 @@
 import pytest
 
-from src.infrastructure.chatwoot_api.chatwoot_http import ChatwootHTTPAdapter
+from src.infrastructure.requests.chatwoot_gateway import ChatwootRequestsGateway
 
 
 class FakeClient:
@@ -15,7 +15,7 @@ class FakeClient:
 @pytest.mark.anyio
 async def test_chatwoot_adapter_sends_message():
     client = FakeClient()
-    adapter = ChatwootHTTPAdapter(
+    adapter = ChatwootRequestsGateway(
         base_url="https://example.com",
         token="token",
         client=client,
@@ -35,6 +35,6 @@ async def test_chatwoot_adapter_requires_base_url(monkeypatch):
     from src.infrastructure.settings import config
 
     monkeypatch.setattr(config, "CHATWOOT_BASE_URL", "")
-    adapter = ChatwootHTTPAdapter(base_url="", token="x", client=FakeClient())
+    adapter = ChatwootRequestsGateway(base_url="", token="x", client=FakeClient())
     with pytest.raises(RuntimeError):
         await adapter.send_message(1, 2, "hola")
