@@ -18,3 +18,15 @@
 - [x] Estructura aplicada: `src/shared/config.py` -> `src/infrastructure/settings/config.py`.
 - [x] Estructura aplicada: `src/shared/logger.py` -> `src/infrastructure/logging/logger.py`.
 - [x] Limpieza aplicada: eliminación de `src/shared/*`.
+- [x] Cierre de migración: validación end-to-end con tests
+  - Resultado: suite completa ejecutada con `.venv/bin/pytest -q`.
+  - Estado: 79 passed.
+- [x] Decisión táctica: instalación mínima de dependencias para validar migración en Python 3.12
+  - Opciones consideradas: instalar `requirements.txt` completo; instalar solo dependencias necesarias para correr tests actuales.
+  - Elegida: instalación mínima (`httpx`, `textual`, `pyyaml`) (justificación: `requirements.txt` completo contiene paquetes incompatibles con Python 3.12 y bloquea la validación).
+- [x] Decisión táctica: subir cobertura con tests unitarios de módulos en 0%
+  - Opciones consideradas: priorizar integración end-to-end; atacar módulos con 0%/muy baja cobertura con tests aislados usando monkeypatch.
+  - Elegida: tests unitarios aislados (justificación: mayor impacto de cobertura por esfuerzo, menor fragilidad y feedback más rápido).
+- [x] Cobertura incrementada con tests en adapters/runners/controllers/presenter
+  - Resultado: cobertura total de `src` subió de 65% a 76% (`.venv/bin/pytest --cov=src --cov-report=term-missing -q`).
+  - Estado de tests: 89 passed.

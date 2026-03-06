@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-from infrastructure.CLI.cli import main
+from infrastructure.cli.cli import main
 
 __all__ = ["main"]

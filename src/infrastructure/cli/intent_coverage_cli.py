@@ -10,7 +10,7 @@ from infrastructure.pymysql.message_reader import MySQLMessageReader
 from infrastructure.pymysql.unit_of_work import PyMySQLUnitOfWork
 from infrastructure.rasa.intent_coverage_parser import RasaIntentCoverageParser
 from infrastructure.rasa.nlu_loader import load_nlu_intents
-from interface_adapter.presenter.intent_coverage_presenter import format_intent_coverage
+from interface_adapter.presenters.intent_coverage_presenter import format_intent_coverage
 from infrastructure.settings.config import build_mysql_config, get_env, load_env_file
 from infrastructure.logging.logger import get_logger
 

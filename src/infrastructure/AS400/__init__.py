@@ -1,1 +1,0 @@
-"""CLI infrastructure entrypoints."""

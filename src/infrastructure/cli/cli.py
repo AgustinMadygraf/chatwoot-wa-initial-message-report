@@ -1,5 +1,5 @@
 """
-Path: src/infrastructure/AS400/cli.py
+Path: src/infrastructure/CLI/cli.py
 """
 
 from __future__ import annotations
@@ -8,48 +8,26 @@ import argparse
 import json
 import sys
 from datetime import datetime
-from typing import cast
-
-from rich.live import Live
-from rich.console import Console
-from rich.table import Table
-from rich import box
-from rich.text import Text
 
 from entities.mysql_config import MySQLConfig
 from infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
-from infrastructure.AS400.ui import (
-    build_sync_progress_screen,
-    print_accounts_table,
-    print_conversations_table,
-    print_health_screen,
-    print_inboxes_table,
-    print_messages_table,
-    print_sync_screen,
-)
 from infrastructure.pymysql.accounts_repository import AccountsRepository
 from infrastructure.pymysql.conversations_repository import ConversationsRepository
-from infrastructure.pymysql.fetchers import (
-    fetch_accounts,
-    fetch_conversations,
-    fetch_inboxes,
-    fetch_messages,
-)
 from infrastructure.pymysql.inboxes_repository import InboxesRepository
 from infrastructure.pymysql.messages_repository import MessagesRepository
 from infrastructure.pymysql.unit_of_work import PyMySQLUnitOfWork
 from infrastructure.health_check import EnvironmentHealthCheck
-from infrastructure.AS400.tui.app import As400App
+from infrastructure.cli.tui.app import As400App
 from infrastructure.settings.config import get_env, load_env_file
 from infrastructure.logging.logger import get_logger
 from use_cases.accounts_sync import sync_account
 from use_cases.conversations_sync import sync_conversations
 from use_cases.health_check import run_health_checks
-from use_cases.ports.health_check import HealthCheckResults, HealthServiceStatus
+from use_cases.ports.health_check import HealthServiceStatus
 from use_cases.inboxes_sync import sync_inboxes
 from use_cases.messages_sync import sync_messages
 
-
+import infrastructure.cli.as400_cli as as400_cli
 
 
 def _get_args() -> argparse.Namespace:
@@ -66,6 +44,17 @@ def _get_args() -> argparse.Namespace:
         "--sync-messages",
         action="store_true",
         help="Sincroniza solo mensajes usando conversaciones ya guardadas en MySQL.",
+    )
+    parser.add_argument(
+        "--test",
+        nargs="?",
+        type=int,
+        const=-1,
+        default=None,
+        help=(
+            "Modo debug para --sync-messages: limita a 1 conversacion. "
+            "Si pasas un ID, usa esa conversacion."
+        ),
     )
     parser.add_argument(
         "--list-inboxes",
@@ -98,57 +87,7 @@ def _require_env(name: str) -> str:
     return str(value)
 
 
-def _show_menu() -> str:
-    console = Console()
-    console.print()
-    table = Table(
-        box=box.SIMPLE,
-        show_lines=False,
-        title="MENU PRINCIPAL (AS/400)",
-        title_style="bold green",
-        width=min(80, console.size.width - 4),
-    )
-    table.add_column("OPCION", justify="right", width=8, style="bold cyan")
-    table.add_column("DESCRIPCION", style="green")
-    table.add_row("1", "Estado general / health check")
-    table.add_row("2", "Listar cuentas")
-    table.add_row("3", "Listar inboxes")
-    table.add_row("4", "Listar conversaciones")
-    table.add_row("5", "Listar mensajes")
-    table.add_row("6", "Sincronizar todo")
-    table.add_row("0", "Salir")
-    console.print(table)
-    console.print(Text("Seleccion: ", style="bold yellow"), end="")
-    return input().strip()
-
-
-def _handle_health(logger) -> None:
-    checker = EnvironmentHealthCheck(logger=logger)
-    results = cast(HealthCheckResults, run_health_checks(checker, logger=logger))
-    print_health_screen(results)
-
-
-def handle_list_inboxes() -> None:
-    inboxes = fetch_inboxes(int(_require_env("CHATWOOT_ACCOUNT_ID")))
-    print_inboxes_table(inboxes)
-
-
-def handle_list_conversations() -> None:
-    conversations = fetch_conversations()
-    print_conversations_table(conversations)
-
-
-def handle_list_messages() -> None:
-    messages = fetch_messages()
-    print_messages_table(messages)
-
-
-def handle_list_accounts() -> None:
-    accounts = fetch_accounts()
-    print_accounts_table(accounts)
-
-
-def _handle_sync(args, logger) -> None:
+def _handle_sync_plain(args, logger) -> None:
     chatwoot_config = ChatwootClientConfig(
         base_url=_require_env("CHATWOOT_BASE_URL"),
         account_id=_require_env("CHATWOOT_ACCOUNT_ID"),
@@ -164,8 +103,8 @@ def _handle_sync(args, logger) -> None:
     client = ChatwootClient(chatwoot_config, logger=logger if args.debug else None)
     started_at = datetime.now()
     progress_logger = logger if args.debug else get_logger("cli", level="WARNING")
-    sync_stats: dict[str, object] = {"phase": "accounts"}
 
+    print("Inicio sync:", started_at.isoformat(timespec="seconds"))
     with PyMySQLUnitOfWork(mysql_config) as uow:
         accounts_repo = AccountsRepository(uow.connection)
         inboxes_repo = InboxesRepository(
@@ -174,65 +113,49 @@ def _handle_sync(args, logger) -> None:
         conversations_repo = ConversationsRepository(uow.connection)
         messages_repo = MessagesRepository(uow.connection)
 
-        def _update_live() -> None:
-            live.update(build_sync_progress_screen(sync_stats, started_at=started_at))
+        try:
+            print("Sync cuentas...")
+            accounts_result = sync_account(client, accounts_repo, logger=progress_logger)
+            print("Cuentas upserted:", accounts_result.get("total_upserted", 0))
 
-        with Live(
-            build_sync_progress_screen(sync_stats, started_at=started_at),
-            refresh_per_second=4,
-        ) as live:
-            try:
-                sync_stats["accounts_upserted"] = sync_account(
-                    client, accounts_repo, logger=progress_logger
-                ).get("total_upserted", 0)
-                _update_live()
-                sync_stats["phase"] = "inboxes"
-                _update_live()
-                sync_stats["inboxes_upserted"] = sync_inboxes(
-                    client, inboxes_repo, logger=progress_logger
-                ).get("total_upserted", 0)
-                _update_live()
-                sync_stats["phase"] = "conversaciones"
-                _update_live()
+            print("Sync inboxes...")
+            inboxes_result = sync_inboxes(client, inboxes_repo, logger=progress_logger)
+            print("Inboxes upserted:", inboxes_result.get("total_upserted", 0))
 
-                def _convo_progress(page: int, total: int) -> None:
-                    sync_stats["conversations_page"] = page
-                    sync_stats["conversations_upserted"] = total
-                    _update_live()
+            print("Sync conversaciones...")
 
-                conversation_ids = sync_conversations(
-                    client,
-                    conversations_repo,
-                    logger=progress_logger,
-                    per_page=args.per_page,
-                    progress=_convo_progress,
+            def _convo_progress(page: int, total: int) -> None:
+                print(f"Conversaciones pagina {page} -> total {total}")
+
+            conversation_ids = sync_conversations(
+                client,
+                conversations_repo,
+                logger=progress_logger,
+                per_page=args.per_page,
+                progress=_convo_progress,
+            )
+
+            print("Sync mensajes...")
+
+            def _msg_progress(conversation_id: int, total: int, errors: int) -> None:
+                print(
+                    f"Mensajes conv {conversation_id} -> total {total} (errores {errors})"
                 )
-                sync_stats["phase"] = "mensajes"
-                _update_live()
 
-                def _msg_progress(conversation_id: int, total: int, errors: int) -> None:
-                    sync_stats["messages_conversation_id"] = conversation_id
-                    sync_stats["messages_upserted"] = total
-                    sync_stats["messages_errors"] = errors
-                    _update_live()
-
-                sync_messages(
-                    client,
-                    messages_repo,
-                    conversation_ids,
-                    logger=progress_logger,
-                    per_page=args.per_page,
-                    progress=_msg_progress,
-                )
-            except KeyboardInterrupt:
-                sync_stats["phase"] = "cancelado"
-                _update_live()
-                print("\nSync cancelado por el usuario.")
-            except (ValueError, RuntimeError) as exc:
-                sync_stats["phase"] = "error"
-                _update_live()
-                print(f"\nSync fallo: {exc}")
-    print_sync_screen(sync_stats, started_at=started_at)
+            sync_messages(
+                client,
+                messages_repo,
+                conversation_ids,
+                logger=progress_logger,
+                per_page=args.per_page,
+                progress=_msg_progress,
+            )
+        except KeyboardInterrupt:
+            print("Sync cancelado por el usuario.")
+            return
+    finished_at = datetime.now()
+    print("Fin sync:", finished_at.isoformat(timespec="seconds"))
+    print("Duracion:", finished_at - started_at)
 
 def _handle_sync_messages_only(args, logger) -> None:
     chatwoot_config = ChatwootClientConfig(
@@ -250,8 +173,8 @@ def _handle_sync_messages_only(args, logger) -> None:
     client = ChatwootClient(chatwoot_config, logger=logger if args.debug else None)
     started_at = datetime.now()
     progress_logger = logger if args.debug else get_logger("cli", level="WARNING")
-    sync_stats: dict[str, object] = {"phase": "mensajes"}
 
+    print("Inicio sync mensajes:", started_at.isoformat(timespec="seconds"))
     with PyMySQLUnitOfWork(mysql_config) as uow:
         conversations_repo = ConversationsRepository(uow.connection)
         messages_repo = MessagesRepository(uow.connection)
@@ -268,18 +191,23 @@ def _handle_sync_messages_only(args, logger) -> None:
         )
         conversation_ids = [int(row["id"]) for row in rows if row.get("id") is not None]
         if not conversation_ids:
-            sync_stats["phase"] = "sin_conversaciones"
-            print_sync_screen(sync_stats, started_at=started_at)
             print("No hay conversaciones en MySQL. Ejecuta --sync primero.")
             return
+        if args.test is not None:
+            if args.test > 0:
+                if args.test not in conversation_ids:
+                    raise ValueError(f"Conversacion {args.test} no existe en MySQL.")
+                conversation_ids = [args.test]
+            else:
+                conversation_ids = [conversation_ids[0]]
+            print(f"Modo test: solo conversacion {conversation_ids[0]}")
 
         def _msg_progress(conversation_id: int, total: int, errors: int) -> None:
             # Commit per page so partial progress is persisted on long runs.
             uow.commit()
-            sync_stats["messages_conversation_id"] = conversation_id
-            sync_stats["messages_upserted"] = total
-            sync_stats["messages_errors"] = errors
-            print_sync_screen(sync_stats, started_at=started_at)
+            print(
+                f"Mensajes conv {conversation_id} -> total {total} (errores {errors})"
+            )
 
         try:
             sync_messages(
@@ -292,36 +220,15 @@ def _handle_sync_messages_only(args, logger) -> None:
             )
         except Exception as exc:  # noqa: BLE001
             raise RuntimeError(f"sync_messages error: {type(exc).__name__}: {exc!r}") from exc
-    print_sync_screen(sync_stats, started_at=started_at)
-
+    finished_at = datetime.now()
+    print("Fin sync mensajes:", finished_at.isoformat(timespec="seconds"))
+    print("Duracion:", finished_at - started_at)
 
 def main() -> None:
     "Punto de entrada para la aplicacion CLI."
     load_env_file()
     if len(sys.argv) == 1:
-        logger = get_logger("cli", level="INFO")
-        while True:
-            choice = _show_menu()
-            if choice == "0":
-                return
-            try:
-                if choice == "1":
-                    _handle_health(logger)
-                elif choice == "2":
-                    handle_list_accounts()
-                elif choice == "3":
-                    handle_list_inboxes()
-                elif choice == "4":
-                    handle_list_conversations()
-                elif choice == "5":
-                    handle_list_messages()
-                elif choice == "6":
-                    args = argparse.Namespace(debug=False, per_page=None)
-                    _handle_sync(args, logger)
-                else:
-                    print("Opcion invalida.")
-            except (ValueError, RuntimeError, KeyboardInterrupt) as exc:
-                print(f"Error: {exc}")
+        as400_cli.main()
         return
 
     args = _get_args()
@@ -350,9 +257,13 @@ def main() -> None:
         As400App().run()
         return
 
+    if args.test is not None and not args.sync_messages:
+        print("Error: --test solo es valido junto con --sync-messages.")
+        sys.exit(1)
+
     if args.list_inboxes:
         try:
-            handle_list_inboxes()
+            as400_cli.handle_list_inboxes()
         except (ValueError, RuntimeError) as exc:
             print(f"Listar inboxes fallo: {exc}")
             sys.exit(1)
@@ -360,7 +271,7 @@ def main() -> None:
 
     if args.list_conversations:
         try:
-            handle_list_conversations()
+            as400_cli.handle_list_conversations()
         except (ValueError, RuntimeError) as exc:
             print(f"Listar conversaciones fallo: {exc}")
             sys.exit(1)
@@ -368,7 +279,7 @@ def main() -> None:
 
     if args.list_messages:
         try:
-            handle_list_messages()
+            as400_cli.handle_list_messages()
         except (ValueError, RuntimeError) as exc:
             print(f"Listar mensajes fallo: {exc}")
             sys.exit(1)
@@ -376,7 +287,7 @@ def main() -> None:
 
     if args.list_accounts:
         try:
-            handle_list_accounts()
+            as400_cli.handle_list_accounts()
         except (ValueError, RuntimeError) as exc:
             print(f"Listar cuentas fallo: {exc}")
             sys.exit(1)
@@ -384,7 +295,7 @@ def main() -> None:
 
     if args.sync:
         try:
-            _handle_sync(args, logger)
+            _handle_sync_plain(args, logger)
         except (ValueError, RuntimeError, KeyboardInterrupt) as exc:
             print(f"Sync fallo: {exc}")
             sys.exit(1)

@@ -4,7 +4,7 @@ import json
 import sys
 from typing import Any
 
-import infrastructure.CLI.cli as cli
+import infrastructure.cli.cli as cli
 
 
 class FakeRepo:

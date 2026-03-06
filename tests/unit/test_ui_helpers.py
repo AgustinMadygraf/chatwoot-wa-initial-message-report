@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from infrastructure.AS400 import ui
+from infrastructure.cli import ui
 
 
 def test_clean_cell_removes_non_ascii_and_whitespace() -> None:

@@ -83,7 +83,8 @@ class IntentCoverageReportUseCase:
         self._logger = logger or get_logger("intent-coverage")
 
     def execute(self, messages: Iterable[MessageSnapshot]) -> IntentCoverageReport:
-        ordered_messages = self._order_messages_by_conversation(messages)
+        normalized_messages = [self._coerce_message(message) for message in messages]
+        ordered_messages = self._order_messages_by_conversation(normalized_messages)
         total_rows = 0
         messages_with_text = 0
         messages_without_text = 0
@@ -207,6 +208,21 @@ class IntentCoverageReportUseCase:
             ordered.extend(items)
         return ordered
 
+    @staticmethod
+    def _coerce_message(message: MessageSnapshot | dict[str, Any]) -> MessageSnapshot:
+        if isinstance(message, MessageSnapshot):
+            return message
+        if isinstance(message, dict):
+            content = message.get("content")
+            conversation_id = message.get("conversation_id")
+            created_at = message.get("created_at")
+            return MessageSnapshot(
+                content=str(content) if content is not None else "",
+                conversation_id=_safe_optional_int(conversation_id),
+                created_at=_safe_optional_int(created_at),
+            )
+        return MessageSnapshot(content=str(getattr(message, "content", "")), conversation_id=None)
+
     def _build_conversation_summaries(
         self,
         stats: dict[int | None, dict[str, Any]],
@@ -255,3 +271,12 @@ def _max_int(left: int | None, right: int | None) -> int | None:
     if right is None:
         return left
     return max(left, right)
+
+
+def _safe_optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None

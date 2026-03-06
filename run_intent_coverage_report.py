@@ -10,7 +10,7 @@ if str(SRC) not in sys.path:
 
 
 def main() -> int:
-    from infrastructure.CLI.intent_coverage_cli import main as cli_main
+    from infrastructure.cli.intent_coverage_cli import main as cli_main
 
     cli_main()
     return 0

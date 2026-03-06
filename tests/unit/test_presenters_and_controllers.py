@@ -4,7 +4,7 @@ import sys
 
 import interface_adapter.controllers.cli as adapter_cli
 import interface_adapter.controllers.init_db_cli as init_db_cli
-from interface_adapter.presenter.init_db_presenter import present_init_db
+from interface_adapter.presenters.init_db_presenter import present_init_db
 from use_cases.init_db import InitDbResult
 
 
