@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 from src.infrastructure.uvicorn.webhook_bridge_server import UvicornWebhookBridgeServer
 from src.interface_adapter.controllers.chatwoot_bridge_controller import (
@@ -36,23 +37,27 @@ def test_uvicorn_webhook_bridge_server_runs(monkeypatch) -> None:
 
 def test_run_use_cases() -> None:
     bridge_server = SimpleNamespace(run=lambda h, p, r: 11)
-    assert RunChatwootBridgeUseCase(bridge_server).execute("h", 1, False) == 11
+    checker = SimpleNamespace(is_available=lambda _h, _p: True)
+    assert RunChatwootBridgeUseCase(bridge_server, checker).execute("h", 1, False) == 11
 
 
-def test_controllers_success_and_errors(monkeypatch, capsys) -> None:
-    class _OkUseCase:
-        def __init__(self, *_args, **_kwargs) -> None:
-            pass
+def test_run_use_case_falls_back_to_next_port() -> None:
+    bridge_server = Mock()
+    bridge_server.run.return_value = 0
+    checker = Mock()
+    checker.is_available.side_effect = [False, True]
 
-        def execute(self, *_args, **_kwargs) -> int:
-            return 0
+    result = RunChatwootBridgeUseCase(bridge_server, checker).execute("0.0.0.0", 8000, False)
 
-    monkeypatch.setattr(
-        "src.interface_adapter.controllers.chatwoot_bridge_controller.RunChatwootBridgeUseCase",
-        _OkUseCase,
-    )
+    assert result == 0
+    checker.is_available.assert_any_call("0.0.0.0", 8000)
+    checker.is_available.assert_any_call("0.0.0.0", 8001)
+    bridge_server.run.assert_called_once_with("0.0.0.0", 8001, False)
 
-    assert ChatwootBridgeController(server=SimpleNamespace()).run() == 0
+
+def test_controllers_success_and_errors(capsys) -> None:
+    usecase = SimpleNamespace(execute=lambda *_args, **_kwargs: 0)
+    assert ChatwootBridgeController(usecase=usecase).run() == 0
     _ = capsys.readouterr()
 
 
