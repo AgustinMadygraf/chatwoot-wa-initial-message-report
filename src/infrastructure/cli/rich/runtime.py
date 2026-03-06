@@ -1,3 +1,5 @@
+import json
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -44,6 +46,7 @@ class RichCliRuntime:
         examples_table.add_column("Comando")
         examples_table.add_row("Chequeo normal", "python3 run.py check")
         examples_table.add_row("Contactos", "python3 run.py contacts")
+        examples_table.add_row("Contactos JSON", "python3 run.py contacts --json")
         examples_table.add_row("Alias compatible", "python3 run.py contact")
         examples_table.add_row("Ejecucion por defecto", "python3 run.py")
         examples_table.add_row("Ayuda", "python3 run.py --help")
@@ -93,13 +96,52 @@ class RichCliRuntime:
             )
             return 1
 
-    def run_contacts(self) -> int:
+    def run_contacts(
+        self,
+        as_json: bool = False,
+        include_headers: bool = False,
+    ) -> int:
         try:
             with self._console.status(
                 "[cyan]Consultando contactos en Chatwoot...[/cyan]", spinner="dots"
             ):
                 settings = load_chatwoot_settings()
                 gateway = ChatwootRequestsGateway(settings=settings)
+                if as_json:
+                    endpoint, response, error_detail = gateway.fetch_contacts_raw_response()
+                    if error_detail is not None:
+                        self._console.print(
+                            Panel(
+                                (
+                                    f"[red]{error_detail}[/red]\n"
+                                    "[yellow]Hint:[/yellow] revisa conectividad y permisos del token."
+                                ),
+                                title="[bold red]Error API[/bold red]",
+                                border_style="red",
+                            )
+                        )
+                        return 1
+                    assert response is not None
+
+                    body: object
+                    try:
+                        body = response.json()
+                    except ValueError:
+                        body = response.text
+
+                    output: object = body
+                    if include_headers:
+                        output = {
+                            "endpoint": endpoint,
+                            "status_code": response.status_code,
+                            "headers": dict(response.headers),
+                            "body": body,
+                        }
+
+                    rendered = json.dumps(output, indent=2, ensure_ascii=False)
+                    self._console.print(rendered, markup=False, soft_wrap=True)
+                    return 0 if 200 <= response.status_code <= 299 else 1
+
                 use_case = FetchChatwootContactsUseCase(gateway=gateway)
                 presenter = RichContactsPresenter(
                     console=self._console, accent_color=self._accent_color

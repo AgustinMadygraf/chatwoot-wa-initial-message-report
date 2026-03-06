@@ -51,3 +51,15 @@
 - **Opciones consideradas**: A) eliminar alias (rompe compatibilidad); B) ocultar alias del help manteniendolo funcional; C) dejar ambos visibles.
 - **Implementado**: opcion B. El comando `contact` sigue activo pero oculto con `hidden=True`.
 - **Antes vs Despues**: antes el listado de comandos mostraba ruido innecesario; despues prioriza comandos canonicos sin perder backward compatibility.
+
+## Iteracion 10 - 2026-03-06
+- **Problema**: el reporte de `contacts` seguia denso en lectura longitudinal (muchas filas similares sin separacion visual clara).
+- **Opciones consideradas**: A) mantener tabla actual; B) mejorar escaneabilidad con `row_styles` alternados y titulo explicito de la tabla; C) rediseñar con paginado interactivo.
+- **Implementado**: opcion B. Se agrego titulo `Contactos (Pagina 1)` y filas alternadas (`row_styles`) en el presenter Rich de infraestructura.
+- **Antes vs Despues**: antes la tabla era uniforme y fatigaba el seguimiento visual; despues se recorre mas rapido sin agregar ruido ni cambiar datos.
+
+## Iteracion 11 - 2026-03-06
+- **Problema**: faltaba modo de inspeccion cruda para auditoria/debug del endpoint `contacts` sin perder el modo tabular por defecto.
+- **Opciones consideradas**: A) mantener solo tabla; B) agregar flags `--json` y `--include-headers` para salida raw; C) crear comando separado (`contacts-raw`).
+- **Implementado**: opcion B. `contacts` ahora acepta `--json` (body crudo) y `--include-headers` (envoltorio con metadatos HTTP), con `json.dumps(indent=2)` a stdout.
+- **Antes vs Despues**: antes solo existia vista tabular procesada; despues tambien hay vista raw util para troubleshooting e integraciones.

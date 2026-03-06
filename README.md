@@ -6,6 +6,11 @@ Validador de conectividad a la API de Chatwoot con base de arquitectura limpia.
 - `python3 run.py`
 - `python3 run.py contacts`
 
+## Uso del comando contacts
+- `python3 run.py contacts` muestra tabla formateada (comportamiento por defecto).
+- `python3 run.py contacts --json` muestra el body JSON crudo de la respuesta de Chatwoot.
+- `python3 run.py contacts --json --include-headers` incluye `endpoint`, `status_code`, `headers` y `body`.
+
 ## Requisitos
 - Python 3.10+
 - Dependencias de `requirements.txt` (si tu entorno tiene `pip` disponible)

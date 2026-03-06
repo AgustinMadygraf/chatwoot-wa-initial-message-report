@@ -85,6 +85,11 @@ class ChatwootRequestsGateway:
             contacts=[],
         )
 
+    def fetch_contacts_raw_response(self) -> tuple[str, Response | None, str | None]:
+        endpoint = self._build_endpoint("contacts")
+        response, _, error_detail = self._perform_get(endpoint)
+        return endpoint, response, error_detail
+
     def _build_endpoint(self, resource: str) -> str:
         return (
             f"{self._settings.base_url}/api/v1/accounts/"

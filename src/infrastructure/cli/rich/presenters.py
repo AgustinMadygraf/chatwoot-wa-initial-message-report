@@ -64,7 +64,12 @@ class RichContactsPresenter:
         self._console.print(f"[bold]Detalle:[/bold] {result.detail}")
 
         if result.contacts:
-            table = Table(show_header=True, header_style="bold cyan")
+            table = Table(
+                title="[bold cyan]Contactos (Pagina 1)[/bold cyan]",
+                show_header=True,
+                header_style="bold cyan",
+                row_styles=["none", "dim"],
+            )
             table.add_column("ID", no_wrap=True, width=5)
             table.add_column("Nombre", max_width=26, overflow="ellipsis")
             table.add_column("Telefono", no_wrap=True, width=16)

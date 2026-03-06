@@ -5,7 +5,7 @@ import typer
 
 def create_app(
     run_check: Callable[[], int],
-    run_contacts: Callable[[], int],
+    run_contacts: Callable[[bool, bool], int],
     app_name: str = "chatwoot-connection-cli",
     show_about: Callable[[], None] | None = None,
     show_examples: Callable[[], None] | None = None,
@@ -33,14 +33,36 @@ def create_app(
         raise typer.Exit(code=run_check())
 
     @app.command("contacts")
-    def contacts() -> None:
+    def contacts(
+        as_json: bool = typer.Option(
+            False,
+            "--json",
+            help="Muestra el JSON crudo de la respuesta de Chatwoot.",
+        ),
+        include_headers: bool = typer.Option(
+            False,
+            "--include-headers",
+            help="Incluye status code y headers HTTP en la salida JSON.",
+        ),
+    ) -> None:
         """Consulta y muestra una pagina de contactos."""
-        raise typer.Exit(code=run_contacts())
+        raise typer.Exit(code=run_contacts(as_json, include_headers))
 
     @app.command("contact", hidden=True)
-    def contact_alias() -> None:
+    def contact_alias(
+        as_json: bool = typer.Option(
+            False,
+            "--json",
+            help="Muestra el JSON crudo de la respuesta de Chatwoot.",
+        ),
+        include_headers: bool = typer.Option(
+            False,
+            "--include-headers",
+            help="Incluye status code y headers HTTP en la salida JSON.",
+        ),
+    ) -> None:
         """Alias de compatibilidad para `contacts`."""
-        raise typer.Exit(code=run_contacts())
+        raise typer.Exit(code=run_contacts(as_json, include_headers))
 
     @app.command("about")
     def about() -> None:
