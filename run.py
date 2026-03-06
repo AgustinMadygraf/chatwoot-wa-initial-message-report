@@ -3,11 +3,13 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from src.entities.chatwoot_connection_result import ChatwootConnectionResult
 from src.infrastructure.requests.chatwoot_requests_gateway import ChatwootRequestsGateway
 from src.infrastructure.settings.env_settings import load_chatwoot_settings
 from src.interface_adapter.controllers.validate_connection_controller import (
     ValidateConnectionController,
+)
+from src.interface_adapter.presenters.rich_connection_presenter import (
+    RichConnectionPresenter,
 )
 from src.use_case.validate_chatwoot_connection import ValidateChatwootConnectionUseCase
 
@@ -22,35 +24,11 @@ app = typer.Typer(
 )
 
 
-class RichConnectionPresenter:
-    def present(self, result: ChatwootConnectionResult) -> int:
-        status_label = "OK" if result.ok else "ERROR"
-        status_color = "green" if result.ok else "red"
-
-        summary = Table.grid(padding=(0, 1))
-        summary.add_column(style="bold")
-        summary.add_column()
-        summary.add_row("Status", f"[{status_color}]{status_label}[/{status_color}]")
-        summary.add_row("Endpoint", result.endpoint)
-        if result.status_code is not None:
-            summary.add_row("HTTP", str(result.status_code))
-
-        console.print(
-            Panel(
-                summary,
-                title="[bold cyan]Resultado[/bold cyan]",
-                border_style=ACCENT_COLOR,
-            )
-        )
-        console.print(f"[bold]Detalle:[/bold] {result.detail}")
-        return 0 if result.ok else 1
-
-
 def _run_validation() -> int:
     settings = load_chatwoot_settings()
     gateway = ChatwootRequestsGateway(settings=settings)
     use_case = ValidateChatwootConnectionUseCase(gateway=gateway)
-    presenter = RichConnectionPresenter()
+    presenter = RichConnectionPresenter(console=console, accent_color=ACCENT_COLOR)
     controller = ValidateConnectionController(use_case=use_case, presenter=presenter)
     return controller.run()
 
