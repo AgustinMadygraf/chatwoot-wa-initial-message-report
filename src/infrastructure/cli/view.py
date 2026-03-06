@@ -15,6 +15,14 @@ class RichCliView:
     def show_preparing(self) -> None:
         console.print("[cyan]Preparing runtime and selecting available port...[/cyan]")
 
+    def show_runtime_target(self, status: RuntimeStatus) -> None:
+        console.print(
+            f"[cyan]Target:[/cyan] host={status.host} start_port={status.port} reload={status.reload}"
+        )
+
+    def show_interrupted(self) -> None:
+        console.print("[yellow]Interrupted:[/yellow] stopping bridge startup.")
+
     def show_start_error(self, message: str) -> None:
         console.print(f"[red]Error:[/red] could not start bridge ({message}).")
 

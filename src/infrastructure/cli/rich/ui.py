@@ -9,7 +9,7 @@ console = Console()
 
 def welcome_panel() -> Panel:
     return Panel.fit(
-        "[bold cyan]Chatwoot Bridge[/bold cyan]\n"
+        "[bold cyan]Chatwoot Bridge 🔌[/bold cyan]\n"
         "[#009688]Webhook runtime for incoming messages[/#009688]",
         border_style="cyan",
         title="API CLI",
@@ -19,6 +19,7 @@ def welcome_panel() -> Panel:
 def quick_help_table() -> Table:
     table = Table(show_header=False, box=None, padding=(0, 1))
     table.add_row("[cyan]Command[/cyan]", "[green]python3 run.py start[/green]")
+    table.add_row("[cyan]Doctor[/cyan]", "[green]python3 run.py doctor[/green]")
     table.add_row("[cyan]Help[/cyan]", "[green]python3 run.py --help[/green]")
     return table
 

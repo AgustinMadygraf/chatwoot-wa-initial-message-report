@@ -21,7 +21,7 @@ class ChatwootConfig:
 CHATWOOT_BASE_URL: str = "https://chatwoot.example.com"
 CHATWOOT_BOT_TOKEN: str = "replace_me"
 WEBHOOK_SECRET: str = "replace_me"
-BRIDGE_HOST: str = "0.0.0.0"
+BRIDGE_HOST: str = "127.0.0.1"
 PORT: int = 8000
 RELOAD: bool = False
 

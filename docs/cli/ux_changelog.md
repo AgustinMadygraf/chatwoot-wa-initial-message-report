@@ -27,3 +27,33 @@
 
 ## Estado
 - **AGOTADO**: no se detectan mejoras significativas adicionales (>20% de usabilidad) sin sobrediseñar ni cambiar lógica de negocio.
+
+## Iteración 4 - 2026-03-06
+- **Problema**: baja descubribilidad en `--help` (faltaban ejemplos explícitos de uso rápido).
+- **Opciones consideradas**:
+  - A: mantener solo la lista de comandos.
+  - B: añadir epílogo de ejemplos cortos en `Typer`.
+  - C: crear subcomando `examples`.
+- **Implementado**: opción B; se agregó `epilog` con ejemplos `start`, `start --quiet` y `doctor`.
+- **Antes vs Después**: de ayuda descriptiva a ayuda accionable en una sola pantalla.
+
+## Iteración 5 - 2026-03-06
+- **Problema**: en arranque faltaba contexto operativo inmediato (host/puerto objetivo), parecía “pensando”.
+- **Opciones consideradas**:
+  - A: dejar logs de uvicorn solamente.
+  - B: mostrar estado objetivo antes de ejecutar (`host`, `start_port`, `reload`).
+  - C: progreso por cada puerto probado.
+- **Implementado**: opción B; se agregó `show_runtime_target(...)` en la vista CLI.
+- **Antes vs Después**: de arranque opaco a arranque con contexto técnico claro previo al bind.
+
+## Iteración 6 - 2026-03-06
+- **Problema**: interrupciones manuales (`Ctrl+C`) no tenían feedback humano consistente.
+- **Opciones consideradas**:
+  - A: dejar traceback/salida estándar.
+  - B: capturar `KeyboardInterrupt` y mostrar mensaje amigable.
+  - C: handler global con pantalla de cierre completa.
+- **Implementado**: opción B; captura de `KeyboardInterrupt` con mensaje de interrupción y salida 130.
+- **Antes vs Después**: de salida abrupta a cierre explícito y predecible para el usuario.
+
+## Estado
+- **AGOTADO**: se alcanzó header consistente, ayuda contextual clara, feedback de arranque y manejo graceful de errores/interrupción sin tocar lógica de negocio.
