@@ -15,3 +15,9 @@
 - [x] Decisión táctica: desacoplar controller del adapter concreto de uvicorn
   - Opciones consideradas: mantener `new Uvicorn...` en controller; inyección por constructor desde composición raíz.
   - Elegida: inyección por constructor (justificación: DIP/SOLID y testabilidad).
+- [x] Decisión táctica: mover la lógica de CLI fuera de `run.py` hacia `src/`
+  - Opciones consideradas: mantener toda la CLI en raíz; mover a `src/interface_adapter/presenters/`; mover a infraestructura.
+  - Elegida: `src/interface_adapter/presenters/cli_app.py` con `run.py` mínimo (justificación: entrypoint limpio y responsabilidades mejor separadas).
+- [x] Decisión táctica: encapsular dependencia `rich` en infraestructura de CLI
+  - Opciones consideradas: importar `rich` directamente en presenter; mover rendering helpers a `src/infrastructure/cli/rich`.
+  - Elegida: `src/infrastructure/cli/rich/ui.py` y presenter consumiendo wrappers internos (justificación: menor acoplamiento de capa de interfaz a librería externa).
