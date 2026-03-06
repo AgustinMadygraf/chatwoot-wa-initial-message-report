@@ -1,9 +1,9 @@
 import sys
 
-from src.application.ports.ngrok_tunnel import NgrokTunnel
-from src.application.use_cases.run_ngrok_tunnel import RunNgrokTunnelUseCase
+from src.use_cases.ports.ngrok_tunnel import NgrokTunnel
+from src.use_cases.run_ngrok_tunnel import RunNgrokTunnelUseCase
 from src.infrastructure.ngrok.ngrok_cli import NgrokCliTunnel
-from src.shared.logger import get_logger
+from src.infrastructure.logging.logger import get_logger
 
 logger = get_logger(__name__)
 

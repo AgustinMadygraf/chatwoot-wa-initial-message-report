@@ -1,5 +1,5 @@
-from src.application.ports.ngrok_tunnel import NgrokTunnel
-from src.shared.logger import get_logger
+from src.use_cases.ports.ngrok_tunnel import NgrokTunnel
+from src.infrastructure.logging.logger import get_logger
 
 logger = get_logger(__name__)
 

@@ -5,14 +5,14 @@ import sys
 
 import requests
 
-from application.use_cases.intent_coverage_report import IntentCoverageReportUseCase
+from use_cases.intent_coverage_report import IntentCoverageReportUseCase
 from infrastructure.pymysql.message_reader import MySQLMessageReader
 from infrastructure.pymysql.unit_of_work import PyMySQLUnitOfWork
 from infrastructure.rasa.intent_coverage_parser import RasaIntentCoverageParser
 from infrastructure.rasa.nlu_loader import load_nlu_intents
 from interface_adapter.presenter.intent_coverage_presenter import format_intent_coverage
-from shared.config import build_mysql_config, get_env, load_env_file
-from shared.logger import get_logger
+from infrastructure.settings.config import build_mysql_config, get_env, load_env_file
+from infrastructure.logging.logger import get_logger
 
 
 def _get_args() -> argparse.Namespace:

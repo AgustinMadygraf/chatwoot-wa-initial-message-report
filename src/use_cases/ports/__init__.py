@@ -1,13 +1,13 @@
-from application.ports.chatwoot_client import ChatwootClientPort
-from application.ports.health_check import HealthCheckPort
-from application.ports.message_reader import MessageReaderPort
-from application.ports.repositories import (
+from use_cases.ports.chatwoot_client import ChatwootClientPort
+from use_cases.ports.health_check import HealthCheckPort
+from use_cases.ports.message_reader import MessageReaderPort
+from use_cases.ports.repositories import (
     AccountsRepositoryPort,
     ConversationsRepositoryPort,
     InboxesRepositoryPort,
     MessagesRepositoryPort,
 )
-from application.ports.unit_of_work import UnitOfWorkPort
+from use_cases.ports.unit_of_work import UnitOfWorkPort
 
 __all__ = [
     "ChatwootClientPort",

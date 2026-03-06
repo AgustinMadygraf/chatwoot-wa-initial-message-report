@@ -5,7 +5,7 @@ from typing import Any, cast
 
 import requests
 
-from shared.logger import Logger, get_logger
+from infrastructure.logging.logger import Logger, get_logger
 
 
 @dataclass

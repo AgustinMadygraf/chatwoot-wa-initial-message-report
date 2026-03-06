@@ -15,8 +15,8 @@ from infrastructure.pymysql.fetchers import (
     fetch_inboxes,
     fetch_messages,
 )
-from shared.config import get_env
-from shared.logger import get_logger
+from infrastructure.settings.config import get_env
+from infrastructure.logging.logger import get_logger
 
 
 class Dataset:

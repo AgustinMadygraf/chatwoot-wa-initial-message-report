@@ -5,7 +5,7 @@ from infrastructure.pymysql.conversations_repository import ConversationsReposit
 from infrastructure.pymysql.inboxes_repository import InboxesRepository
 from infrastructure.pymysql.messages_repository import MessagesRepository
 from infrastructure.pymysql.unit_of_work import PyMySQLUnitOfWork
-from shared.config import build_mysql_config
+from infrastructure.settings.config import build_mysql_config
 
 
 def fetch_accounts() -> list[dict[str, object]]:

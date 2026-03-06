@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterable, Protocol
 
-from application.dto.message_snapshot import MessageSnapshot
+from use_cases.dto.message_snapshot import MessageSnapshot
 
 
 class MessageReaderPort(Protocol):

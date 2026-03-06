@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from application.ports.mysql_admin import MySQLAdminPort
+from use_cases.ports.mysql_admin import MySQLAdminPort
 from entities.mysql_config import MySQLConfig
 
 

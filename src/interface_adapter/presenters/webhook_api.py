@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from src.infrastructure.chatwoot_api.chatwoot_http import ChatwootHTTPAdapter
 from src.infrastructure.memory.in_memory_conversation_store import InMemoryConversationStore
 from src.infrastructure.rasa.rasa_http import RasaHTTPGateway
-from src.application.use_cases.handle_incoming import HandleIncomingMessageUseCase
+from src.use_cases.handle_incoming import HandleIncomingMessageUseCase
 from src.interface_adapter.controllers.webhook_controller import WebhookController
 
 app = FastAPI()

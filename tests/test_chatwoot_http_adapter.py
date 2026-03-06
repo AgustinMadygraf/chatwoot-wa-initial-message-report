@@ -32,7 +32,7 @@ async def test_chatwoot_adapter_sends_message():
 
 @pytest.mark.anyio
 async def test_chatwoot_adapter_requires_base_url(monkeypatch):
-    from src.shared import config
+    from src.infrastructure.settings import config
 
     monkeypatch.setattr(config, "CHATWOOT_BASE_URL", "")
     adapter = ChatwootHTTPAdapter(base_url="", token="x", client=FakeClient())

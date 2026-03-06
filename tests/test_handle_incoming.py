@@ -1,9 +1,9 @@
 import pytest
 
-from src.domain.message import Message
+from src.entities.message import Message
 from src.infrastructure.memory.in_memory_conversation_store import InMemoryConversationStore
 from src.infrastructure.memory.noop_conversation_store import NoopConversationStore
-from src.application.use_cases.handle_incoming import HandleIncomingMessageUseCase
+from src.use_cases.handle_incoming import HandleIncomingMessageUseCase
 
 
 class DummyGateway:

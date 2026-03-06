@@ -1,8 +1,8 @@
-from src.application.ports.webhook_bridge import WebhookBridgeServer
-from src.application.use_cases.run_chatwoot_bridge import RunChatwootRasaBridgeUseCase
+from src.use_cases.ports.webhook_bridge import WebhookBridgeServer
+from src.use_cases.run_chatwoot_bridge import RunChatwootRasaBridgeUseCase
 from src.infrastructure.chatwoot_bridge.uvicorn_server import UvicornWebhookBridgeServer
-from src.shared import config
-from src.shared.logger import get_logger
+from src.infrastructure.settings import config
+from src.infrastructure.logging.logger import get_logger
 
 logger = get_logger(__name__)
 

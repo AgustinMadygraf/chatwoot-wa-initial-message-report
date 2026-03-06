@@ -3,12 +3,12 @@
 from datetime import datetime
 from typing import Any, Dict
 
-from src.domain.message import Message
-from src.application.ports.chatwoot_gateway import ChatwootGateway
-from src.application.ports.conversation_store import ConversationStore
-from src.application.ports.rasa_gateway import RasaGateway
+from src.entities.message import Message
+from src.use_cases.ports.chatwoot_gateway import ChatwootGateway
+from src.use_cases.ports.conversation_store import ConversationStore
+from src.use_cases.ports.rasa_gateway import RasaGateway
 from src.infrastructure.memory.noop_conversation_store import NoopConversationStore
-from src.shared.logger import get_logger
+from src.infrastructure.logging.logger import get_logger
 
 logger = get_logger(__name__)
 

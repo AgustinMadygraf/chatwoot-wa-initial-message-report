@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Iterable
 
-from application.dto.message_snapshot import MessageSnapshot
-from application.ports.message_reader import MessageReaderPort
+from use_cases.dto.message_snapshot import MessageSnapshot
+from use_cases.ports.message_reader import MessageReaderPort
 from infrastructure.pymysql.messages_repository import MessagesRepository
 
 

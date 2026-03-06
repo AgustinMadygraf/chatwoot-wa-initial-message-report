@@ -1,6 +1,6 @@
 ﻿from __future__ import annotations
 
-from application.use_cases.intent_coverage_report import IntentCoverageReport
+from use_cases.intent_coverage_report import IntentCoverageReport
 
 
 def format_intent_coverage(

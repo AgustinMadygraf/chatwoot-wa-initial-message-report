@@ -1,5 +1,15 @@
 from __future__ import annotations
 
-from application.use_cases.health_check import run_health_checks
+from use_cases.ports.health_check import HealthCheckPort, HealthCheckResults
+from infrastructure.logging.logger import Logger, get_logger
 
-__all__ = ["run_health_checks"]
+
+def run_health_checks(
+    checker: HealthCheckPort,
+    logger: Logger | None = None,
+) -> HealthCheckResults:
+    logger = logger or get_logger("health")
+    results = checker.check()
+    results["ok"] = bool(results["chatwoot"]["ok"] and results["mysql"]["ok"])
+    logger.info("Health check ejecutado.")
+    return results

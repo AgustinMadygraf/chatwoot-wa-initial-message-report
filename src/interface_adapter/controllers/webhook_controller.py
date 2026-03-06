@@ -1,8 +1,8 @@
 from fastapi import HTTPException, Request
 
-from src.shared import config
-from src.shared.logger import get_logger
-from src.application.use_cases.handle_incoming import HandleIncomingMessageUseCase
+from src.infrastructure.settings import config
+from src.infrastructure.logging.logger import get_logger
+from src.use_cases.handle_incoming import HandleIncomingMessageUseCase
 
 logger = get_logger(__name__)
 

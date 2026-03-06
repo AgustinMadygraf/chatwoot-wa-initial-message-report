@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from application.ports.health_check import HealthCheckPort, HealthCheckResults, HealthServiceStatus
+from use_cases.ports.health_check import HealthCheckPort, HealthCheckResults, HealthServiceStatus
 from infrastructure.chatwoot_api.client import ChatwootClient, ChatwootClientConfig
 from infrastructure.pymysql.health import MySQLConfig, check_connection as check_mysql
-from shared.config import get_env
-from shared.logger import Logger, get_logger
+from infrastructure.settings.config import get_env
+from infrastructure.logging.logger import Logger, get_logger
 
 
 class EnvironmentHealthCheck(HealthCheckPort):

@@ -4,9 +4,9 @@ from typing import Any
 
 import requests
 
-from application.ports.intent_coverage import IntentCoverageParserPort, IntentPrediction
-from shared.config import get_rasa_parse_url
-from shared.logger import Logger, get_logger
+from use_cases.ports.intent_coverage import IntentCoverageParserPort, IntentPrediction
+from infrastructure.settings.config import get_rasa_parse_url
+from infrastructure.logging.logger import Logger, get_logger
 
 
 class RasaIntentCoverageParser(IntentCoverageParserPort):

@@ -1,9 +1,9 @@
 import sys
 
-from src.application.ports.rasa_runner import RasaRunner
-from src.application.use_cases.run_rasa_server import RunRasaServerUseCase
+from src.use_cases.ports.rasa_runner import RasaRunner
+from src.use_cases.run_rasa_server import RunRasaServerUseCase
 from src.infrastructure.rasa.rasa_runner import RasaCliRunner
-from src.shared.logger import get_logger
+from src.infrastructure.logging.logger import get_logger
 
 logger = get_logger(__name__)
 

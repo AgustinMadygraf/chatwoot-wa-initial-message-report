@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from application.ports.unit_of_work import UnitOfWorkPort
+from use_cases.ports.unit_of_work import UnitOfWorkPort
 from entities.mysql_config import MySQLConfig
 from infrastructure.pymysql.connection import get_mysql_connection
 

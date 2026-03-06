@@ -1,4 +1,4 @@
-from src.application.ports.rasa_runner import RasaRunner
+from src.use_cases.ports.rasa_runner import RasaRunner
 
 
 class TrainRasaModelUseCase:

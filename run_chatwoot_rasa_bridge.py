@@ -1,5 +1,5 @@
 def main() -> int:
-    from src.shared import config
+    from src.infrastructure.settings import config
     from src.interface_adapter.controllers.chatwoot_rasa_bridge_controller import (
         ChatwootRasaBridgeController,
     )

@@ -1,9 +1,9 @@
 from typing import List, Sequence
 
-from src.application.ports.rasa_gateway import RasaGateway
+from src.use_cases.ports.rasa_gateway import RasaGateway
 from src.infrastructure.httpx.http_client import HttpxClient
-from src.shared import config
-from src.shared.logger import get_logger
+from src.infrastructure.settings import config
+from src.infrastructure.logging.logger import get_logger
 
 logger = get_logger(__name__)
 

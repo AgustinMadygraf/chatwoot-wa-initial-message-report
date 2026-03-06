@@ -1,9 +1,9 @@
 from typing import Tuple
 
-from src.application.ports.chatwoot_gateway import ChatwootGateway
+from src.use_cases.ports.chatwoot_gateway import ChatwootGateway
 from src.infrastructure.httpx.http_client import HttpxClient
-from src.shared import config
-from src.shared.logger import get_logger
+from src.infrastructure.settings import config
+from src.infrastructure.logging.logger import get_logger
 
 logger = get_logger(__name__)
 

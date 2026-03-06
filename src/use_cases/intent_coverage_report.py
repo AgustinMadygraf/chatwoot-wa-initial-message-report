@@ -4,9 +4,9 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any, Iterable
 
-from application.dto.message_snapshot import MessageSnapshot
-from application.ports.intent_coverage import IntentCoverageParserPort
-from shared.logger import Logger, get_logger
+from use_cases.dto.message_snapshot import MessageSnapshot
+from use_cases.ports.intent_coverage import IntentCoverageParserPort
+from infrastructure.logging.logger import Logger, get_logger
 
 
 @dataclass(frozen=True)

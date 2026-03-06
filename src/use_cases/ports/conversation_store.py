@@ -1,6 +1,6 @@
 from typing import Protocol, Sequence
 
-from src.domain.message import Message
+from src.entities.message import Message
 
 
 class ConversationStore(Protocol):

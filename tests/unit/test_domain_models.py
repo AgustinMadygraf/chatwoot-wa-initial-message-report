@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from domain.chatwoot import Account, Conversation, Inbox, Message
+from entities.chatwoot import Account, Conversation, Inbox, Message
 
 
 def test_account_from_payload() -> None:

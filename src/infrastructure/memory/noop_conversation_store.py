@@ -1,7 +1,7 @@
 from typing import Sequence
 
-from src.domain.message import Message
-from src.application.ports.conversation_store import ConversationStore
+from src.entities.message import Message
+from src.use_cases.ports.conversation_store import ConversationStore
 
 
 class NoopConversationStore(ConversationStore):

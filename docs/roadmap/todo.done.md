@@ -1,0 +1,20 @@
+# DONE
+
+- [x] Diagnóstico inicial del objetivo "réplica local de API Chatwoot"
+  - CERTEZA: el repo consume y depende de endpoints concretos de Chatwoot (accounts, inboxes, conversations, messages) y webhook `message_created`.
+  - CERTEZA: existe un modelo de datos local en MySQL (tablas `1_accounts`, `2_inboxes`, `3_conversations`, `4_messages`) que define un subset útil para réplica mínima.
+  - DUDA ALTO NIVEL: alcance de la réplica (solo contratos usados por este repo vs. réplica más amplia de Chatwoot).
+  - DUDA ALTO NIVEL: nivel de fidelidad requerido (mock para pruebas vs. emulación semántica para análisis profundo de datos).
+  - DUDA ALTO NIVEL: estrategia de versionado del contrato (payloads reales congelados, fixtures sintéticos, o mixto).
+
+- [x] Decisión táctica: migrar namespaces de arquitectura
+  - Opciones consideradas: mantener aliases de compatibilidad en `src/application` y `src/domain`; migración completa y ajuste global de imports; migración parcial por capas.
+  - Elegida: migración completa y ajuste global de imports (justificación: reduce deuda técnica, evita duplicación de paths y mantiene claridad estructural).
+- [x] Estructura aplicada: eliminar `src/application` migrando a `src/use_cases` (incluye `ports`, `dto` y casos de uso).
+- [x] Estructura aplicada: eliminar `src/domain` migrando a `src/entities` (incluye `chatwoot`, `message`, `conversation_memory`).
+- [x] Decisión táctica: mover configuración y logging desde `src/shared` a infraestructura
+  - Opciones consideradas: mantener `shared` con reexports; mover solo `config`; mover `config` y `logger` a `src/infrastructure/{settings,logging}` y actualizar imports.
+  - Elegida: mover ambos módulos a infraestructura y actualizar imports (justificación: separación clara por capa técnica y eliminación de namespace genérico ambiguo).
+- [x] Estructura aplicada: `src/shared/config.py` -> `src/infrastructure/settings/config.py`.
+- [x] Estructura aplicada: `src/shared/logger.py` -> `src/infrastructure/logging/logger.py`.
+- [x] Limpieza aplicada: eliminación de `src/shared/*`.

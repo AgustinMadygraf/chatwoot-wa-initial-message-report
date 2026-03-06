@@ -18,7 +18,7 @@ class FakeClient:
 
 @pytest.mark.anyio
 async def test_rasa_gateway_parses_texts(monkeypatch):
-    from src.shared import config
+    from src.infrastructure.settings import config
 
     monkeypatch.setattr(config, "RASA_REST_URL", "http://localhost:5005/webhooks/rest/webhook")
     payload = json.dumps([{"text": "hola"}, {"text": "mundo"}])
@@ -31,7 +31,7 @@ async def test_rasa_gateway_parses_texts(monkeypatch):
 
 @pytest.mark.anyio
 async def test_rasa_gateway_handles_error_status(monkeypatch):
-    from src.shared import config
+    from src.infrastructure.settings import config
 
     monkeypatch.setattr(config, "RASA_REST_URL", "http://localhost:5005/webhooks/rest/webhook")
     client = FakeClient(status=500, text="error")

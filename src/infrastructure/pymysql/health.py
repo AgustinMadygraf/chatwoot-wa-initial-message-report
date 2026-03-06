@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import pymysql
 
-from shared.logger import Logger, get_logger
+from infrastructure.logging.logger import Logger, get_logger
 
 
 @dataclass

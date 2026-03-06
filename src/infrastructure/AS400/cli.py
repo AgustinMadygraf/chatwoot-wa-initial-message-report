@@ -40,14 +40,14 @@ from infrastructure.pymysql.messages_repository import MessagesRepository
 from infrastructure.pymysql.unit_of_work import PyMySQLUnitOfWork
 from infrastructure.health_check import EnvironmentHealthCheck
 from infrastructure.AS400.tui.app import As400App
-from shared.config import get_env, load_env_file
-from shared.logger import get_logger
-from application.use_cases.accounts_sync import sync_account
-from application.use_cases.conversations_sync import sync_conversations
-from application.use_cases.health_check import run_health_checks
-from application.ports.health_check import HealthCheckResults, HealthServiceStatus
-from application.use_cases.inboxes_sync import sync_inboxes
-from application.use_cases.messages_sync import sync_messages
+from infrastructure.settings.config import get_env, load_env_file
+from infrastructure.logging.logger import get_logger
+from use_cases.accounts_sync import sync_account
+from use_cases.conversations_sync import sync_conversations
+from use_cases.health_check import run_health_checks
+from use_cases.ports.health_check import HealthCheckResults, HealthServiceStatus
+from use_cases.inboxes_sync import sync_inboxes
+from use_cases.messages_sync import sync_messages
 
 
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List
 
-from src.domain.message import Message
+from src.entities.message import Message
 
 
 @dataclass

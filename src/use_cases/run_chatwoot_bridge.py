@@ -1,4 +1,4 @@
-from src.application.ports.webhook_bridge import WebhookBridgeServer
+from src.use_cases.ports.webhook_bridge import WebhookBridgeServer
 
 
 class RunChatwootRasaBridgeUseCase:

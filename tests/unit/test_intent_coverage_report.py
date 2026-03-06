@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-from application.ports.intent_coverage import IntentCoverageParserPort, IntentPrediction
-from application.use_cases.intent_coverage_report import IntentCoverageReportUseCase
+from use_cases.ports.intent_coverage import IntentCoverageParserPort, IntentPrediction
+from use_cases.intent_coverage_report import IntentCoverageReportUseCase
 from infrastructure.rasa.nlu_loader import load_nlu_intents
 
 

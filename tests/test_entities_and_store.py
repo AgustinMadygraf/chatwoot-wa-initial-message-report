@@ -1,7 +1,7 @@
 import pytest
 
-from src.domain.conversation_memory import ConversationMemory
-from src.domain.message import Message
+from src.entities.conversation_memory import ConversationMemory
+from src.entities.message import Message
 from src.infrastructure.memory.noop_conversation_store import NoopConversationStore
 
 

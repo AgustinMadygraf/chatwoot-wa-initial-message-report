@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from application.use_cases import health_check
+from use_cases import health_check
 
 
 class FakeChecker:

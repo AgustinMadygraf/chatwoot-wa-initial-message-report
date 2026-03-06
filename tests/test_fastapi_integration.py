@@ -6,7 +6,7 @@ from src.interface_adapter.presenters.webhook_api import app
 
 @pytest.mark.anyio
 async def test_webhook_rejects_bad_secret(monkeypatch):
-    from src.shared import config
+    from src.infrastructure.settings import config
 
     monkeypatch.setattr(config, "WEBHOOK_SECRET", "expected")
     transport = httpx.ASGITransport(app=app)
@@ -20,7 +20,7 @@ async def test_webhook_rejects_bad_secret(monkeypatch):
 
 @pytest.mark.anyio
 async def test_webhook_accepts_incoming(monkeypatch):
-    from src.shared import config
+    from src.infrastructure.settings import config
 
     monkeypatch.setattr(config, "WEBHOOK_SECRET", "expected")
     monkeypatch.setattr(config, "CHATWOOT_BASE_URL", "https://example.com")

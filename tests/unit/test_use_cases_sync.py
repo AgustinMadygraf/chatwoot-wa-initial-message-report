@@ -5,10 +5,10 @@ from typing import Any
 
 import requests
 
-from application.use_cases.accounts_sync import sync_account
-from application.use_cases.conversations_sync import _extract_conversations, sync_conversations
-from application.use_cases.inboxes_sync import _extract_inboxes, sync_inboxes
-from application.use_cases.messages_sync import _extract_messages, sync_messages
+from use_cases.accounts_sync import sync_account
+from use_cases.conversations_sync import _extract_conversations, sync_conversations
+from use_cases.inboxes_sync import _extract_inboxes, sync_inboxes
+from use_cases.messages_sync import _extract_messages, sync_messages
 
 
 class FakeAccountsRepo:
