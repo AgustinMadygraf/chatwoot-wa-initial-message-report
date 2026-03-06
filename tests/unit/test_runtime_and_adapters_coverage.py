@@ -2,16 +2,10 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import pytest
-
 from src.infrastructure.uvicorn.webhook_bridge_server import UvicornWebhookBridgeServer
-from src.infrastructure.ngrok.ngrok_cli import NgrokCliTunnel
-from src.interface_adapter.controllers.chatwoot_rasa_bridge_controller import (
-    ChatwootRasaBridgeController,
+from src.interface_adapter.controllers.chatwoot_bridge_controller import (
+    ChatwootBridgeController,
 )
-from src.interface_adapter.controllers.ngrok_tunnel_controller import NgrokTunnelController
-from src.interface_adapter.controllers.rasa_server_controller import RasaServerController
-from src.interface_adapter.controllers.rasa_train_controller import RasaTrainController
 from src.interface_adapter.presenters.intent_coverage_presenter import format_intent_coverage
 from src.use_cases.intent_coverage_report import (
     ConversationSummary,
@@ -19,8 +13,7 @@ from src.use_cases.intent_coverage_report import (
     IntentSample,
     TrainingIntentCoverage,
 )
-from src.use_cases.run_chatwoot_bridge import RunChatwootRasaBridgeUseCase
-from src.use_cases.run_ngrok_tunnel import RunNgrokTunnelUseCase
+from src.use_cases.run_chatwoot_bridge_server import RunChatwootBridgeUseCase
 
 
 def test_uvicorn_webhook_bridge_server_runs(monkeypatch) -> None:
@@ -41,57 +34,9 @@ def test_uvicorn_webhook_bridge_server_runs(monkeypatch) -> None:
     assert called["reload"] is False
 
 
-def test_ngrok_extract_domain_and_start(monkeypatch) -> None:
-    tunnel = NgrokCliTunnel(port=9000, url_webhook="https://demo.example.com/webhook/abc")
-    assert tunnel._extract_domain() == "demo.example.com"
-    monkeypatch.setattr("src.infrastructure.ngrok.ngrok_cli.subprocess.call", lambda cmd: 7)
-    assert tunnel.start() == 7
-
-
-def test_ngrok_extract_domain_errors() -> None:
-    with pytest.raises(RuntimeError):
-        NgrokCliTunnel(url_webhook="   ")._extract_domain()
-    with pytest.raises(RuntimeError):
-        NgrokCliTunnel(url_webhook="https:///")._extract_domain()
-
-
-def test_ngrok_status_and_stop(monkeypatch) -> None:
-    class _Resp:
-        status_code = 200
-
-        @staticmethod
-        def json():
-            return {"tunnels": [{"name": "a"}, {"name": "b"}, {"bad": "skip"}]}
-
-    deleted: list[str] = []
-    monkeypatch.setattr("src.infrastructure.ngrok.ngrok_cli.httpx.get", lambda *_args, **_kwargs: _Resp())
-    monkeypatch.setattr(
-        "src.infrastructure.ngrok.ngrok_cli.httpx.delete",
-        lambda url, **_kwargs: deleted.append(url),
-    )
-    tunnel = NgrokCliTunnel(url_webhook="demo.example.com")
-    status = tunnel.status()
-    assert status["running"] is True
-    tunnel.stop()
-    assert len(deleted) == 2
-
-
-def test_ngrok_status_error(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "src.infrastructure.ngrok.ngrok_cli.httpx.get",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("x")),
-    )
-    tunnel = NgrokCliTunnel(url_webhook="demo.example.com")
-    status = tunnel.status()
-    assert status["running"] is False
-    assert "error" in status
-
-
 def test_run_use_cases() -> None:
     bridge_server = SimpleNamespace(run=lambda h, p, r: 11)
-    tunnel = SimpleNamespace(stop=lambda: None, start=lambda: 12)
-    assert RunChatwootRasaBridgeUseCase(bridge_server).execute("h", 1, False) == 11
-    assert RunNgrokTunnelUseCase(tunnel).execute() == 12
+    assert RunChatwootBridgeUseCase(bridge_server).execute("h", 1, False) == 11
 
 
 def test_controllers_success_and_errors(monkeypatch, capsys) -> None:
@@ -102,25 +47,13 @@ def test_controllers_success_and_errors(monkeypatch, capsys) -> None:
         def execute(self, *_args, **_kwargs) -> int:
             return 0
 
-    class _FailUseCase(_OkUseCase):
-        def execute(self, *_args, **_kwargs) -> int:
-            raise RuntimeError("boom")
-
     monkeypatch.setattr(
-        "src.interface_adapter.controllers.chatwoot_rasa_bridge_controller.RunChatwootRasaBridgeUseCase",
+        "src.interface_adapter.controllers.chatwoot_bridge_controller.RunChatwootBridgeUseCase",
         _OkUseCase,
     )
-    monkeypatch.setattr(
-        "src.interface_adapter.controllers.ngrok_tunnel_controller.RunNgrokTunnelUseCase",
-        _FailUseCase,
-    )
 
-    assert ChatwootRasaBridgeController(server=SimpleNamespace()).run() == 0
-    assert NgrokTunnelController(tunnel=SimpleNamespace()).run() == 1
-    assert RasaServerController(runner=SimpleNamespace()).run() == 1
-    assert RasaTrainController(runner=SimpleNamespace()).run() == 1
-    err = capsys.readouterr().err
-    assert "ERROR:" in err
+    assert ChatwootBridgeController(server=SimpleNamespace()).run() == 0
+    _ = capsys.readouterr()
 
 
 def test_intent_coverage_presenter_formats_sections() -> None:

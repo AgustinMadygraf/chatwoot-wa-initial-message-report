@@ -6,7 +6,6 @@ from typing import Any, Dict
 from src.entities.message import Message
 from src.use_cases.ports.chatwoot_gateway import ChatwootGateway
 from src.use_cases.ports.conversation_store import ConversationStore
-from src.use_cases.ports.rasa_gateway import RasaGateway
 from src.infrastructure.memory.noop_conversation_store import NoopConversationStore
 from src.infrastructure.logging.logger import get_logger
 
@@ -20,14 +19,12 @@ class HandleIncomingMessageUseCase:
         self,
         gateway: ChatwootGateway,
         store: ConversationStore | None = None,
-        rasa: RasaGateway | None = None,
     ):
         self.gateway = gateway
         self.store = store or NoopConversationStore()
-        self.rasa = rasa
 
     async def execute(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        "Maneja un mensaje entrante de Chatwoot y responde usando Rasa si esta configurado."
+        "Maneja un mensaje entrante de Chatwoot y responde un acuse por defecto."
         event = payload.get("event")
         msg_type = payload.get("message_type")
         if event != "message_created" or msg_type != "incoming":
@@ -56,19 +53,6 @@ class HandleIncomingMessageUseCase:
                 logger.exception("Failed to append incoming message to conversation store")
 
         content = "Ok"
-        fallback_used = False
-        if self.rasa and content_in:
-            try:
-                responses = await self.rasa.send_message(str(conversation_id), str(content_in))
-                if responses:
-                    content = responses[0]
-                else:
-                    content = "Bot no activado"
-                    fallback_used = True
-            except (ValueError, RuntimeError, TimeoutError):
-                logger.exception("Error getting response from Rasa, falling back to default content")
-                content = "Bot no activado"
-                fallback_used = True
         logger.info(
             "Sending reply content to account",
             content=content,
@@ -83,7 +67,7 @@ class HandleIncomingMessageUseCase:
             return {"ok": False, "error": "request error", "detail": str(exc)}
 
         logger.info("Chatwoot response status", status=status)
-        if content and not fallback_used:
+        if content:
             try:
                 await self.store.append_message(
                     Message(

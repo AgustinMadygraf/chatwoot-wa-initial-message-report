@@ -9,7 +9,7 @@ app = FastAPI()
 
 adapter = ChatwootHTTPAdapter()
 store = InMemoryConversationStore()
-usecase = HandleIncomingMessageUseCase(adapter, store=store, rasa=None)
+usecase = HandleIncomingMessageUseCase(adapter, store=store)
 controller = WebhookController(usecase)
 
 

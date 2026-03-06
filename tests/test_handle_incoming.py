@@ -17,16 +17,6 @@ class DummyGateway:
         return self.status, self.text
 
 
-class DummyRasa:
-    def __init__(self, responses):
-        self.responses = responses
-        self.calls = []
-
-    async def send_message(self, sender_id, text):
-        self.calls.append((sender_id, text))
-        return self.responses
-
-
 class SpyStore(NoopConversationStore):
     def __init__(self):
         self.messages = []
@@ -100,11 +90,10 @@ async def test_handle_incoming_store_failure_does_not_break():
 
 
 @pytest.mark.anyio
-async def test_handle_incoming_uses_rasa_response():
+async def test_handle_incoming_uses_default_reply():
     gateway = DummyGateway(status=200, text="ok")
-    rasa = DummyRasa(["respuesta"])
     store = SpyStore()
-    usecase = HandleIncomingMessageUseCase(gateway, store=store, rasa=rasa)
+    usecase = HandleIncomingMessageUseCase(gateway, store=store)
     payload = {
         "event": "message_created",
         "message_type": "incoming",
@@ -114,8 +103,7 @@ async def test_handle_incoming_uses_rasa_response():
     }
     result = await usecase.execute(payload)
     assert result["ok"] is True
-    assert gateway.sent == [(1, 2, "respuesta")]
-    assert rasa.calls == [("2", "hola")]
+    assert gateway.sent == [(1, 2, "Ok")]
 
 
 @pytest.mark.anyio

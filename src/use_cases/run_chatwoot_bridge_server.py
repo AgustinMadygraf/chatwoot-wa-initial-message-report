@@ -1,7 +1,7 @@
 from src.use_cases.ports.webhook_bridge import WebhookBridgeServer
 
 
-class RunChatwootRasaBridgeUseCase:
+class RunChatwootBridgeUseCase:
     def __init__(self, server: WebhookBridgeServer):
         self.server = server
 

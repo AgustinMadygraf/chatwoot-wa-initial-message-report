@@ -30,3 +30,13 @@
 - [x] Cobertura incrementada con tests en adapters/runners/controllers/presenter
   - Resultado: cobertura total de `src` subió de 65% a 76% (`.venv/bin/pytest --cov=src --cov-report=term-missing -q`).
   - Estado de tests: 89 passed.
+- [x] Decisión táctica: eliminar dependencias explícitas de RASA del runtime
+  - Opciones consideradas: mantener stubs y módulos RASA; quitar archivos/imports RASA y dejar webhook con respuesta por defecto.
+  - Elegida: quitar RASA del runtime y mantener webhook operativo con respuesta `Ok` (justificación: coherencia con requisito de eliminar todo lo relacionado con RASA sin romper el flujo principal).
+- [x] Limpieza aplicada: eliminación de archivos y referencias de RASA en `src/`, `tests/`, `requirements.txt`, scripts y `README.md`.
+- [x] Decisión táctica: eliminar NGROK y renombrar bridge para remover naming residual de RASA
+  - Opciones consideradas: mantener módulos deshabilitados; eliminar módulos y referencias en runtime/tests/docs.
+  - Elegida: eliminación completa de NGROK y renombre de bridge a nombres neutros (justificación: coherencia de arquitectura y reducción de deuda/ruido).
+- [x] Limpieza aplicada: eliminado NGROK en código, scripts, configuración y documentación.
+- [x] Limpieza aplicada: renombrado `chatwoot_rasa_bridge` -> `chatwoot_bridge` en script/controlador/use case.
+- [x] Validación: `pytest` en verde (102 passed).

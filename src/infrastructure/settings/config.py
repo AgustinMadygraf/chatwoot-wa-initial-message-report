@@ -19,16 +19,13 @@ class ChatwootConfig:
     data_dir: str = "data"
 
 
-# Hardcoded defaults for bridge / Rasa / ngrok.
+# Hardcoded defaults for bridge.
 CHATWOOT_BASE_URL: str = "https://chatwoot.example.com"
 CHATWOOT_BOT_TOKEN: str = "replace_me"
 WEBHOOK_SECRET: str = "replace_me"
 BRIDGE_HOST: str = "0.0.0.0"
 PORT: int = 8000
 RELOAD: bool = False
-RASA_BASE_URL: str = "http://localhost:5005"
-RASA_REST_URL: str = "http://localhost:5005/webhooks/rest/webhook"
-URL_WEBHOOK: str = ""
 
 
 def load_env_file(path: str = ".env") -> None:
@@ -59,29 +56,12 @@ def get_webhook_secret() -> str:
     return secret if secret else WEBHOOK_SECRET
 
 
-def get_url_webhook() -> str:
-    url = get_env("URL_WEBHOOK")+"/webhook/"
-    return url if url else URL_WEBHOOK
-
-
 def get_port() -> int:
     raw = get_env("PORT")
     try:
         return int(raw) if raw else PORT
     except ValueError:
         return PORT
-
-
-def get_rasa_parse_url() -> str:
-    """Return the configured URL to hit `/model/parse` on the Rasa server."""
-
-    parse_url = get_env("RASA_PARSE_URL")
-    if parse_url:
-        return parse_url
-    base = get_env("RASA_BASE_URL")
-    if not base:
-        base = RASA_BASE_URL
-    return f"{base.rstrip('/')}/model/parse"
 
 
 def build_mysql_config() -> MySQLConfig:
