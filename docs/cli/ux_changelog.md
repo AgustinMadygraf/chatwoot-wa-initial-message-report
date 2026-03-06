@@ -63,3 +63,9 @@
 - **Opciones consideradas**: A) mantener solo tabla; B) agregar flags `--json` para salida raw; C) crear comando separado (`contacts-raw`).
 - **Implementado**: opcion B. `contacts` ahora acepta `--json` (envoltorio con metadatos HTTP y body crudo), con `json.dumps(indent=2)` a stdout.
 - **Antes vs Despues**: antes solo existia vista tabular procesada; despues tambien hay vista raw util para troubleshooting e integraciones.
+
+## Iteracion 12 - 2026-03-06
+- **Problema**: `run_fastapi.py` no tenia UX de CLI (sin `--help`, sin opciones de host/puerto, arranque poco guiado).
+- **Opciones consideradas**: A) mantener script plano de `uvicorn.run`; B) envolver en Typer con `serve`, defaults claros y panel de arranque; C) rediseño completo con comandos de administracion adicionales.
+- **Implementado**: opcion B. Se agrego CLI Typer en `run_fastapi.py` con comando `serve`, opciones `--host/--port/--reload`, callback por defecto compatible y panel Rich de informacion de arranque.
+- **Antes vs Despues**: antes era un script sin descubribilidad; despues ofrece ayuda contextual, configuracion explicita y feedback visual consistente.

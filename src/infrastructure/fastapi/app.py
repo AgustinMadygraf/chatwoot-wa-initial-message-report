@@ -39,7 +39,7 @@ def health() -> dict[str, str]:
 @app.get("/api/v1/accounts/{account_id}/inboxes")
 def get_inboxes(
     account_id: int,
-    api_access_token: str | None = Header(default=None),
+    api_access_token: str | None = Header(default=None, convert_underscores=False),
 ) -> list[dict[str, Any]]:
     _require_token(api_access_token)
     return [
@@ -57,7 +57,7 @@ def get_inboxes(
 def get_contacts(
     account_id: int,
     page: int = Query(default=1, ge=1),
-    api_access_token: str | None = Header(default=None),
+    api_access_token: str | None = Header(default=None, convert_underscores=False),
 ) -> dict[str, Any]:
     _require_token(api_access_token)
     start = (page - 1) * PAGE_SIZE
