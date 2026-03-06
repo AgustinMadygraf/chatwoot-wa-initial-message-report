@@ -16,3 +16,4 @@ certs/*
 .coverage
 src/infrastructure/rasa/.rasa/
 src/infrastructure/rasa/models/*.tar.gz
+data/

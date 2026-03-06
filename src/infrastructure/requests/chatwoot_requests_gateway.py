@@ -1,3 +1,7 @@
+import math
+import time
+from collections.abc import Callable
+
 import requests
 from requests import Response
 
@@ -30,9 +34,12 @@ class ChatwootRequestsGateway:
             network_diag=network_diag,
         )
 
-    def fetch_contacts_page(self) -> ChatwootContactsResult:
+    def fetch_contacts_page(self, page: int = 1) -> ChatwootContactsResult:
         endpoint = self._build_endpoint("contacts")
-        response, network_diag, error_detail = self._perform_get(endpoint)
+        response, network_diag, error_detail = self._perform_get(
+            endpoint,
+            params={"page": page},
+        )
         if error_detail is not None:
             return ChatwootContactsResult(
                 ok=False,
@@ -85,10 +92,111 @@ class ChatwootRequestsGateway:
             contacts=[],
         )
 
-    def fetch_contacts_raw_response(self) -> tuple[str, Response | None, str | None]:
+    def fetch_contacts_raw_response(
+        self,
+        page: int = 1,
+    ) -> tuple[str, Response | None, str | None]:
         endpoint = self._build_endpoint("contacts")
-        response, _, error_detail = self._perform_get(endpoint)
+        response, _, error_detail = self._perform_get(endpoint, params={"page": page})
         return endpoint, response, error_detail
+
+    def fetch_contacts_raw_response_with_retries(
+        self,
+        page: int = 1,
+        max_retries: int = 3,
+        retry_delay_seconds: float = 1.0,
+        on_retry: Callable[[int], None] | None = None,
+    ) -> tuple[str, Response | None, str | None]:
+        endpoint = self._build_endpoint("contacts")
+        last_error: str | None = None
+
+        for attempt in range(1, max_retries + 1):
+            current_endpoint, response, error_detail = self.fetch_contacts_raw_response(
+                page=page
+            )
+            endpoint = current_endpoint
+            if error_detail is None:
+                return endpoint, response, None
+            last_error = error_detail
+            if attempt < max_retries:
+                if on_retry is not None:
+                    on_retry(attempt)
+                time.sleep(retry_delay_seconds)
+
+        return endpoint, None, last_error
+
+    def fetch_all_contacts_raw(
+        self,
+        max_retries: int = 3,
+        request_delay_seconds: float = 1.0,
+        on_page_downloaded: Callable[[int, int], None] | None = None,
+        on_retry: Callable[[int, int, int], None] | None = None,
+    ) -> tuple[str, list[dict], Response | None, str | None]:
+        endpoint, first_response, first_error = self.fetch_contacts_raw_response_with_retries(
+            page=1,
+            max_retries=max_retries,
+            retry_delay_seconds=request_delay_seconds,
+            on_retry=(
+                (lambda attempt: on_retry(1, 1, attempt))
+                if on_retry is not None
+                else None
+            ),
+        )
+        if first_error is not None:
+            return endpoint, [], None, first_error
+        assert first_response is not None
+
+        if not 200 <= first_response.status_code <= 299:
+            return (
+                endpoint,
+                [],
+                first_response,
+                (
+                    f"Estado HTTP no valido: {first_response.status_code}. "
+                    f"Body parcial: {first_response.text[:180]}"
+                ),
+            )
+
+        first_payload = self._parse_json_payload(first_response)
+        contacts_all = self._extract_raw_contacts(first_payload)
+        total_count, current_page = self._extract_pagination_meta(first_payload)
+        total_pages = max(1, math.ceil(total_count / 15))
+
+        if on_page_downloaded is not None:
+            on_page_downloaded(1, total_pages)
+
+        for page in range(current_page + 1, total_pages + 1):
+            time.sleep(request_delay_seconds)
+            _, response, error_detail = self.fetch_contacts_raw_response_with_retries(
+                page=page,
+                max_retries=max_retries,
+                retry_delay_seconds=request_delay_seconds,
+                on_retry=(
+                    (lambda attempt, current_page=page, total=total_pages: on_retry(current_page, total, attempt))
+                    if on_retry is not None
+                    else None
+                ),
+            )
+            if error_detail is not None:
+                return endpoint, contacts_all, None, error_detail
+            assert response is not None
+            if not 200 <= response.status_code <= 299:
+                return (
+                    endpoint,
+                    contacts_all,
+                    response,
+                    (
+                        f"Estado HTTP no valido en pagina {page}: {response.status_code}. "
+                        f"Body parcial: {response.text[:180]}"
+                    ),
+                )
+
+            payload = self._parse_json_payload(response)
+            contacts_all.extend(self._extract_raw_contacts(payload))
+            if on_page_downloaded is not None:
+                on_page_downloaded(page, total_pages)
+
+        return endpoint, contacts_all, first_response, None
 
     def _build_endpoint(self, resource: str) -> str:
         return (
@@ -96,7 +204,11 @@ class ChatwootRequestsGateway:
             f"{self._settings.account_id}/{resource}"
         )
 
-    def _perform_get(self, endpoint: str) -> tuple[Response | None, str, str | None]:
+    def _perform_get(
+        self,
+        endpoint: str,
+        params: dict[str, int] | None = None,
+    ) -> tuple[Response | None, str, str | None]:
         host, port = extract_host_port(self._settings.base_url)
 
         if not host:
@@ -117,6 +229,7 @@ class ChatwootRequestsGateway:
             response = requests.get(
                 endpoint,
                 headers=headers,
+                params=params,
                 timeout=self._settings.timeout_seconds,
                 verify=self._settings.tls_verify,
             )
@@ -183,6 +296,38 @@ class ChatwootRequestsGateway:
                 )
             )
         return contacts, f"Contactos parseados: {len(contacts)}."
+
+    @staticmethod
+    def _parse_json_payload(response: Response) -> object:
+        return response.json()
+
+    @staticmethod
+    def _extract_raw_contacts(payload: object) -> list[dict]:
+        if isinstance(payload, list):
+            return [item for item in payload if isinstance(item, dict)]
+        if isinstance(payload, dict):
+            if isinstance(payload.get("payload"), list):
+                return [item for item in payload["payload"] if isinstance(item, dict)]
+            if isinstance(payload.get("data"), list):
+                return [item for item in payload["data"] if isinstance(item, dict)]
+        return []
+
+    @staticmethod
+    def _extract_pagination_meta(payload: object) -> tuple[int, int]:
+        if not isinstance(payload, dict):
+            return 0, 1
+        meta = payload.get("meta", {})
+        if not isinstance(meta, dict):
+            return 0, 1
+        try:
+            count = int(meta.get("count", 0) or 0)
+        except (TypeError, ValueError):
+            count = 0
+        try:
+            current_page = int(meta.get("current_page", 1) or 1)
+        except (TypeError, ValueError):
+            current_page = 1
+        return count, current_page
 
     @staticmethod
     def _map_response(

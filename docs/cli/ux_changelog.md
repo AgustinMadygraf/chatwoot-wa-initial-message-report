@@ -60,6 +60,6 @@
 
 ## Iteracion 11 - 2026-03-06
 - **Problema**: faltaba modo de inspeccion cruda para auditoria/debug del endpoint `contacts` sin perder el modo tabular por defecto.
-- **Opciones consideradas**: A) mantener solo tabla; B) agregar flags `--json` y `--include-headers` para salida raw; C) crear comando separado (`contacts-raw`).
-- **Implementado**: opcion B. `contacts` ahora acepta `--json` (body crudo) y `--include-headers` (envoltorio con metadatos HTTP), con `json.dumps(indent=2)` a stdout.
+- **Opciones consideradas**: A) mantener solo tabla; B) agregar flags `--json` para salida raw; C) crear comando separado (`contacts-raw`).
+- **Implementado**: opcion B. `contacts` ahora acepta `--json` (envoltorio con metadatos HTTP y body crudo), con `json.dumps(indent=2)` a stdout.
 - **Antes vs Despues**: antes solo existia vista tabular procesada; despues tambien hay vista raw util para troubleshooting e integraciones.
