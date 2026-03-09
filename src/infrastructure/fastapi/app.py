@@ -1,13 +1,23 @@
+"""
+Path: src/infrastructure/fastapi/app.py
+"""
+
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.responses import HTMLResponse
 
+from src.interface_adapter.controllers.fastapi_proxy_controllers import (
+    GetContactByIdController,
+    GetContactsController,
+    GetInboxByIdController,
+    GetInboxesController,
+)
 from src.infrastructure.requests.chatwoot_fastapi_proxy_client import (
     ChatwootFastApiProxyClient,
-    ChatwootProxyError,
 )
 from src.infrastructure.settings.env_settings import load_chatwoot_settings
+from src.use_case.errors import ProxyGatewayError
 
 app = FastAPI(title="Chatwoot API Interface", version="2.1.0")
 
@@ -32,7 +42,7 @@ def _require_proxy_client() -> ChatwootFastApiProxyClient:
     return _proxy_client
 
 
-def _raise_http_error(error: ChatwootProxyError) -> None:
+def _raise_http_error(error: ProxyGatewayError) -> None:
     raise HTTPException(status_code=error.status_code, detail=error.detail) from error
 
 
@@ -119,20 +129,20 @@ def favicon() -> Response:
 @app.get("/api/v1/accounts/{account_id}/inboxes")
 def get_inboxes(account_id: int) -> Any:
     client = _require_proxy_client()
+    controller = GetInboxesController(client=client)
     try:
-        client.enforce_account_id(account_id)
-        return client.get_inboxes(account_id)
-    except ChatwootProxyError as error:
+        return controller.run(account_id=account_id)
+    except ProxyGatewayError as error:
         _raise_http_error(error)
 
 
 @app.get("/api/v1/accounts/{account_id}/inboxes/{inbox_id}")
 def get_inbox_by_id(account_id: int, inbox_id: int) -> dict[str, Any]:
     client = _require_proxy_client()
+    controller = GetInboxByIdController(client=client)
     try:
-        client.enforce_account_id(account_id)
-        return client.get_inbox_by_id(account_id=account_id, inbox_id=inbox_id)
-    except ChatwootProxyError as error:
+        return controller.run(account_id=account_id, inbox_id=inbox_id)
+    except ProxyGatewayError as error:
         _raise_http_error(error)
 
 
@@ -142,18 +152,18 @@ def get_contacts(
     page: str | None = Query(default=None),
 ) -> dict[str, Any]:
     client = _require_proxy_client()
+    controller = GetContactsController(client=client)
     try:
-        client.enforce_account_id(account_id)
-        return client.get_contacts(account_id=account_id, page=page)
-    except ChatwootProxyError as error:
+        return controller.run(account_id=account_id, page=page)
+    except ProxyGatewayError as error:
         _raise_http_error(error)
 
 
 @app.get("/api/v1/accounts/{account_id}/contacts/{id}")
 def get_contact_by_id(account_id: int, id: int) -> dict[str, Any]:
     client = _require_proxy_client()
+    controller = GetContactByIdController(client=client)
     try:
-        client.enforce_account_id(account_id)
-        return client.get_contact_by_id(account_id=account_id, contact_id=id)
-    except ChatwootProxyError as error:
+        return controller.run(account_id=account_id, contact_id=id)
+    except ProxyGatewayError as error:
         _raise_http_error(error)
