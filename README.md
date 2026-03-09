@@ -42,19 +42,25 @@ Si aparece `CERTIFICATE_VERIFY_FAILED`, el servidor Chatwoot probablemente no es
 Opciones:
 1. Recomendado: completar `certs/chatwoot-ca-bundle.pem` con la CA/intermedios correctos.
 
-## Replica local de contrato (FastAPI)
-Endpoints implementados para testing local:
+## FastAPI como interfaz de Chatwoot (produccion)
+La app FastAPI ya no usa fixtures locales: consulta Chatwoot real via API
+usando las credenciales del `.env`.
+
+Endpoints expuestos:
 - `GET /health`
 - `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/inboxes`
 - `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/contacts?page=N`
+- `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/contacts?page=all`
+- `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/contacts/{CONTACT_ID}`
+
+Nota: los datos devueltos son los de Chatwoot (upstream). Si los campos
+`es_contacto_calificado`, `es_cliente`, `xubio_customer_id`, etc. existen en
+`custom_attributes`, se devuelven tal cual.
 
 Arranque:
 - `python3 run_fastapi.py`
 
-Configuracion sugerida para la CLI contra mock:
-- `CHATWOOT_BASE_URL=http://127.0.0.1:8001`
-- `CHATWOOT_ACCOUNT_ID=1`
-- `CHATWOOT_API_ACCESS_TOKEN=cualquier_valor`
-
-Autenticacion en mock local:
-- No requiere token para pruebas locales.
+Configuracion sugerida para ejecutar la interfaz FastAPI local:
+- `CHATWOOT_BASE_URL=https://chatwoot.tu-dominio.com`
+- `CHATWOOT_ACCOUNT_ID=<tu_account_id>`
+- `CHATWOOT_API_ACCESS_TOKEN=<tu_token>`

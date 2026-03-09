@@ -1,65 +1,159 @@
-import json
-from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi.responses import HTMLResponse
 
-PAGE_SIZE = 15
-ROOT_DIR = Path(__file__).resolve().parents[3]
-CONTACTS_FIXTURE = ROOT_DIR / "data" / "all_contacts.json"
+from src.infrastructure.requests.chatwoot_fastapi_proxy_client import (
+    ChatwootFastApiProxyClient,
+    ChatwootProxyError,
+)
+from src.infrastructure.settings.env_settings import load_chatwoot_settings
 
-
-def _load_contacts() -> list[dict[str, Any]]:
-    if CONTACTS_FIXTURE.exists():
-        raw = json.loads(CONTACTS_FIXTURE.read_text(encoding="utf-8"))
-        if isinstance(raw, list):
-            return [item for item in raw if isinstance(item, dict)]
-    return []
+app = FastAPI(title="Chatwoot API Interface", version="2.1.0")
 
 
-CONTACTS = _load_contacts()
-app = FastAPI(title="Chatwoot Local Contract Mock", version="1.0.0")
+try:
+    _settings = load_chatwoot_settings()
+    _proxy_client = ChatwootFastApiProxyClient(_settings)
+except Exception:
+    _settings = None
+    _proxy_client = None
+
+
+def _require_proxy_client() -> ChatwootFastApiProxyClient:
+    if _proxy_client is None:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Configuracion Chatwoot invalida. Verifica .env: "
+                "CHATWOOT_BASE_URL, CHATWOOT_ACCOUNT_ID, CHATWOOT_API_ACCESS_TOKEN."
+            ),
+        )
+    return _proxy_client
+
+
+def _raise_http_error(error: ChatwootProxyError) -> None:
+    raise HTTPException(status_code=error.status_code, detail=error.detail) from error
+
+
+def _human_href(path: str) -> str:
+    href = (
+        path.replace("{account_id}", "1")
+        .replace("{id}", "21")
+        .replace("{inbox_id}", "2")
+    )
+    if "contacts" in href and "{id}" not in path and "?" not in href:
+        href = f"{href}?page=1"
+    return href
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    if _settings is None:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Configuracion Chatwoot invalida. Verifica .env: "
+                "CHATWOOT_BASE_URL, CHATWOOT_ACCOUNT_ID, CHATWOOT_API_ACCESS_TOKEN."
+            ),
+        )
+    return {
+        "status": "ok",
+        "mode": "proxy",
+        "chatwoot_base_url": _settings.base_url,
+    }
+
+
+@app.get("/")
+def root(format: str = Query(default="human")) -> Any:
+    endpoints: list[dict[str, object]] = []
+    for route in app.routes:
+        methods = sorted(
+            method
+            for method in (getattr(route, "methods", set()) or set())
+            if method not in {"HEAD", "OPTIONS"}
+        )
+        path = getattr(route, "path", None)
+        if not path:
+            continue
+        endpoints.append({"path": path, "methods": methods})
+
+    endpoints.sort(key=lambda item: str(item["path"]))
+    if format.lower() == "json":
+        return {"count": len(endpoints), "endpoints": endpoints}
+
+    lines = []
+    for item in endpoints:
+        methods = ", ".join(item["methods"]) if item["methods"] else "-"
+        path = str(item["path"])
+        href = _human_href(path)
+        lines.append(
+            f"<li><code>{methods}</code> "
+            f"<a href='{href}'><code>{path}</code></a></li>"
+        )
+
+    html = (
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        "<title>Endpoints</title>"
+        "<style>"
+        "body{font-family:Arial,sans-serif;max-width:900px;margin:32px auto;padding:0 16px;}"
+        "code{background:#f3f4f6;padding:2px 6px;border-radius:4px;}"
+        "li{margin:10px 0;}h1{margin-bottom:8px;}p{color:#444;}a{text-decoration:none;}"
+        "</style></head><body>"
+        "<h1>Endpoints disponibles</h1>"
+        "<p>Vista humana. Para formato JSON usa <code>/?format=json</code>.</p>"
+        "<p>Los links usan <code>account_id=1</code> por defecto.</p>"
+        f"<p>Total: <strong>{len(endpoints)}</strong></p>"
+        "<ul>"
+        + "".join(lines)
+        + "</ul></body></html>"
+    )
+    return HTMLResponse(content=html)
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> Response:
+    return Response(status_code=204)
 
 
 @app.get("/api/v1/accounts/{account_id}/inboxes")
-def get_inboxes(
-    account_id: int,
-) -> list[dict[str, Any]]:
-    return [
-        {
-            "id": 2,
-            "name": "Whatsapp API",
-            "channel_type": "Channel::Whatsapp",
-            "provider": "whatsapp_cloud",
-            "account_id": account_id,
-        }
-    ]
+def get_inboxes(account_id: int) -> Any:
+    client = _require_proxy_client()
+    try:
+        client.enforce_account_id(account_id)
+        return client.get_inboxes(account_id)
+    except ChatwootProxyError as error:
+        _raise_http_error(error)
+
+
+@app.get("/api/v1/accounts/{account_id}/inboxes/{inbox_id}")
+def get_inbox_by_id(account_id: int, inbox_id: int) -> dict[str, Any]:
+    client = _require_proxy_client()
+    try:
+        client.enforce_account_id(account_id)
+        return client.get_inbox_by_id(account_id=account_id, inbox_id=inbox_id)
+    except ChatwootProxyError as error:
+        _raise_http_error(error)
 
 
 @app.get("/api/v1/accounts/{account_id}/contacts")
 def get_contacts(
-    request: Request,
     account_id: int,
-    page: int | None = Query(default=None, ge=1),
+    page: str | None = Query(default=None),
 ) -> dict[str, Any]:
-    if page is None:
-        target_url = str(request.url.include_query_params(page=1))
-        return RedirectResponse(url=target_url, status_code=307)
+    client = _require_proxy_client()
+    try:
+        client.enforce_account_id(account_id)
+        return client.get_contacts(account_id=account_id, page=page)
+    except ChatwootProxyError as error:
+        _raise_http_error(error)
 
-    start = (page - 1) * PAGE_SIZE
-    end = start + PAGE_SIZE
-    payload = CONTACTS[start:end]
-    return {
-        "payload": payload,
-        "meta": {
-            "count": len(CONTACTS),
-            "current_page": page,
-            "account_id": account_id,
-        },
-    }
+
+@app.get("/api/v1/accounts/{account_id}/contacts/{id}")
+def get_contact_by_id(account_id: int, id: int) -> dict[str, Any]:
+    client = _require_proxy_client()
+    try:
+        client.enforce_account_id(account_id)
+        return client.get_contact_by_id(account_id=account_id, contact_id=id)
+    except ChatwootProxyError as error:
+        _raise_http_error(error)
