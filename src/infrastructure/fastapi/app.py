@@ -2,8 +2,10 @@
 Path: src/infrastructure/fastapi/app.py
 """
 
+from contextlib import asynccontextmanager
 from typing import Any
 
+import httpx
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.responses import HTMLResponse
 
@@ -16,18 +18,45 @@ from src.interface_adapter.controllers.fastapi_proxy_controllers import (
 from src.infrastructure.requests.chatwoot_fastapi_proxy_client import (
     ChatwootFastApiProxyClient,
 )
-from src.infrastructure.settings.env_settings import load_chatwoot_settings
+from src.infrastructure.requests.http_transport import HttpxAsyncTransport
+from src.infrastructure.settings.env_settings import ChatwootSettings, load_chatwoot_settings
 from src.use_case.errors import ProxyGatewayError
 
-app = FastAPI(title="Chatwoot API Interface", version="2.1.0")
+_settings: ChatwootSettings | None = None
+_proxy_client: ChatwootFastApiProxyClient | None = None
+_async_http_client: httpx.AsyncClient | None = None
 
 
-try:
-    _settings = load_chatwoot_settings()
-    _proxy_client = ChatwootFastApiProxyClient(_settings)
-except Exception:
-    _settings = None
-    _proxy_client = None
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    global _settings, _proxy_client, _async_http_client
+
+    try:
+        _settings = load_chatwoot_settings()
+        _async_http_client = httpx.AsyncClient(
+            timeout=_settings.timeout_seconds,
+            verify=_settings.tls_verify,
+        )
+        _proxy_client = ChatwootFastApiProxyClient(
+            _settings,
+            transport=HttpxAsyncTransport(client=_async_http_client),
+        )
+    except Exception:
+        _settings = None
+        _proxy_client = None
+        if _async_http_client is not None:
+            await _async_http_client.aclose()
+            _async_http_client = None
+
+    try:
+        yield
+    finally:
+        if _async_http_client is not None:
+            await _async_http_client.aclose()
+            _async_http_client = None
+
+
+app = FastAPI(title="Chatwoot API Interface", version="2.1.0", lifespan=lifespan)
 
 
 def _require_proxy_client() -> ChatwootFastApiProxyClient:
@@ -127,43 +156,43 @@ def favicon() -> Response:
 
 
 @app.get("/api/v1/accounts/{account_id}/inboxes")
-def get_inboxes(account_id: int) -> Any:
+async def get_inboxes(account_id: int) -> Any:
     client = _require_proxy_client()
     controller = GetInboxesController(client=client)
     try:
-        return controller.run(account_id=account_id)
+        return await controller.run(account_id=account_id)
     except ProxyGatewayError as error:
         _raise_http_error(error)
 
 
 @app.get("/api/v1/accounts/{account_id}/inboxes/{inbox_id}")
-def get_inbox_by_id(account_id: int, inbox_id: int) -> dict[str, Any]:
+async def get_inbox_by_id(account_id: int, inbox_id: int) -> dict[str, Any]:
     client = _require_proxy_client()
     controller = GetInboxByIdController(client=client)
     try:
-        return controller.run(account_id=account_id, inbox_id=inbox_id)
+        return await controller.run(account_id=account_id, inbox_id=inbox_id)
     except ProxyGatewayError as error:
         _raise_http_error(error)
 
 
 @app.get("/api/v1/accounts/{account_id}/contacts")
-def get_contacts(
+async def get_contacts(
     account_id: int,
     page: str | None = Query(default=None),
 ) -> dict[str, Any]:
     client = _require_proxy_client()
     controller = GetContactsController(client=client)
     try:
-        return controller.run(account_id=account_id, page=page)
+        return await controller.run(account_id=account_id, page=page)
     except ProxyGatewayError as error:
         _raise_http_error(error)
 
 
 @app.get("/api/v1/accounts/{account_id}/contacts/{id}")
-def get_contact_by_id(account_id: int, id: int) -> dict[str, Any]:
+async def get_contact_by_id(account_id: int, id: int) -> dict[str, Any]:
     client = _require_proxy_client()
     controller = GetContactByIdController(client=client)
     try:
-        return controller.run(account_id=account_id, contact_id=id)
+        return await controller.run(account_id=account_id, contact_id=id)
     except ProxyGatewayError as error:
         _raise_http_error(error)

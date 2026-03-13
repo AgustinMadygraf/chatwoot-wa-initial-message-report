@@ -27,7 +27,7 @@ def sanitize_payload(value: Any, key: str | None = None) -> Any:
         return [sanitize_payload(item, key=key) for item in value]
     if isinstance(value, str):
         normalized_key = key.lower() if isinstance(key, str) else ""
-        if key in SENSITIVE_KEYS or any(part in normalized_key for part in SENSITIVE_KEY_PARTS):
+        if normalized_key in SENSITIVE_KEYS or any(part in normalized_key for part in SENSITIVE_KEY_PARTS):
             return _mask_secret(value)
         return _truncate_long_numeric_sequences(value)
     return value
@@ -57,3 +57,4 @@ def _truncate_long_numeric_sequences(value: str) -> str:
         lambda m: f"{m.group(1)}{_truncate_text(m.group(2))}{m.group(3)}",
         masked,
     )
+

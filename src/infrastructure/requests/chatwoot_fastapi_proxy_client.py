@@ -5,27 +5,40 @@ Path: src/infrastructure/requests/chatwoot_fastapi_proxy_client.py
 import logging
 from typing import Any
 
-import requests
-
-from src.infrastructure.settings.env_settings import ChatwootSettings
 from src.infrastructure.requests.chatwoot_inbox_mapper import map_to_inbox
+from src.infrastructure.requests.http_transport import (
+    AsyncHttpTransport,
+    HttpResponse,
+    HttpTimeoutError,
+    HttpTlsError,
+    HttpTransportError,
+    HttpxAsyncTransport,
+)
 from src.infrastructure.requests.inboxes_payload_mapper import normalize_inboxes_payload
 from src.infrastructure.requests.sensitive_data_sanitizer import sanitize_payload
+from src.infrastructure.settings.env_settings import ChatwootSettings
 from src.use_case.chatwoot_contacts_query import (
-    fetch_all_contacts_paginated,
-    find_contact_in_paginated_contacts,
+    fetch_all_contacts_paginated_async,
+    find_contact_in_paginated_contacts_async,
 )
 from src.use_case.errors import ProxyGatewayError
 
 PAGE_SIZE = 15
 logger = logging.getLogger(__name__)
+
+
 class ChatwootProxyError(ProxyGatewayError):
     pass
 
 
 class ChatwootFastApiProxyClient:
-    def __init__(self, settings: ChatwootSettings) -> None:
+    def __init__(
+        self,
+        settings: ChatwootSettings,
+        transport: AsyncHttpTransport | None = None,
+    ) -> None:
         self._settings = settings
+        self._transport = transport or HttpxAsyncTransport()
 
     def enforce_account_id(self, account_id: int) -> None:
         if account_id != self._settings.account_id:
@@ -37,8 +50,8 @@ class ChatwootFastApiProxyClient:
                 ),
             )
 
-    def get_inboxes(self, account_id: int) -> Any:
-        response = self._forward_get(account_id=account_id, resource="inboxes")
+    async def get_inboxes(self, account_id: int) -> Any:
+        response = await self._forward_get(account_id=account_id, resource="inboxes")
         payload = self._parse_json(response)
         inboxes = normalize_inboxes_payload(payload)
         if inboxes is None:
@@ -54,13 +67,13 @@ class ChatwootFastApiProxyClient:
         mapped_inboxes = [map_to_inbox(inbox) for inbox in sanitized_inboxes]
         return [inbox.raw for inbox in mapped_inboxes]
 
-    def get_inbox_by_id(self, account_id: int, inbox_id: int) -> dict[str, Any]:
+    async def get_inbox_by_id(self, account_id: int, inbox_id: int) -> dict[str, Any]:
         logger.info(
             "inbox_lookup_started account_id=%s inbox_id=%s",
             account_id,
             inbox_id,
         )
-        payload = self.get_inboxes(account_id)
+        payload = await self.get_inboxes(account_id)
         inboxes = [map_to_inbox(inbox) for inbox in payload if isinstance(inbox, dict)]
 
         available_ids: list[int] = []
@@ -86,12 +99,12 @@ class ChatwootFastApiProxyClient:
         )
         raise ChatwootProxyError(status_code=404, detail="Inbox not found")
 
-    def get_contacts(self, account_id: int, page: str | None) -> dict[str, Any]:
+    async def get_contacts(self, account_id: int, page: str | None) -> dict[str, Any]:
         if page is None:
             page = "1"
 
         if page.lower() == "all":
-            return self._get_contacts_all(account_id)
+            return await self._get_contacts_all(account_id)
 
         try:
             numeric_page = int(page)
@@ -103,7 +116,7 @@ class ChatwootFastApiProxyClient:
                 detail="Invalid page value. Use a number >= 1 or 'all'.",
             ) from exc
 
-        response = self._forward_get(
+        response = await self._forward_get(
             account_id=account_id,
             resource="contacts",
             params={"page": numeric_page},
@@ -120,9 +133,9 @@ class ChatwootFastApiProxyClient:
             },
         }
 
-    def get_contact_by_id(self, account_id: int, contact_id: int) -> dict[str, Any]:
+    async def get_contact_by_id(self, account_id: int, contact_id: int) -> dict[str, Any]:
         try:
-            found = find_contact_in_paginated_contacts(
+            found = await find_contact_in_paginated_contacts_async(
                 fetch_page=lambda page_number: self._get_contacts_page(
                     account_id=account_id, page_number=page_number
                 ),
@@ -135,9 +148,9 @@ class ChatwootFastApiProxyClient:
             raise ChatwootProxyError(status_code=404, detail="Contact not found")
         return {"payload": found.raw}
 
-    def _get_contacts_all(self, account_id: int) -> dict[str, Any]:
+    async def _get_contacts_all(self, account_id: int) -> dict[str, Any]:
         try:
-            contacts = fetch_all_contacts_paginated(
+            contacts = await fetch_all_contacts_paginated_async(
                 fetch_page=lambda page_number: self._get_contacts_page(
                     account_id=account_id, page_number=page_number
                 ),
@@ -155,8 +168,8 @@ class ChatwootFastApiProxyClient:
             },
         }
 
-    def _get_contacts_page(self, account_id: int, page_number: int) -> dict[str, Any]:
-        response = self._forward_get(
+    async def _get_contacts_page(self, account_id: int, page_number: int) -> dict[str, Any]:
+        response = await self._forward_get(
             account_id=account_id,
             resource="contacts",
             params={"page": page_number},
@@ -169,34 +182,34 @@ class ChatwootFastApiProxyClient:
             )
         return payload
 
-    def _forward_get(
+    async def _forward_get(
         self,
         account_id: int,
         resource: str,
         params: dict[str, Any] | None = None,
-    ) -> requests.Response:
+    ) -> HttpResponse:
         url = f"{self._settings.base_url}/api/v1/accounts/{account_id}/{resource}"
         headers = {"api_access_token": self._settings.api_access_token}
 
         try:
-            response = requests.get(
+            response = await self._transport.get(
                 url,
                 headers=headers,
                 params=params,
                 timeout=self._settings.timeout_seconds,
                 verify=self._settings.tls_verify,
             )
-        except requests.exceptions.Timeout as exc:
+        except HttpTimeoutError as exc:
             raise ChatwootProxyError(
                 status_code=504,
                 detail=f"Timeout consultando Chatwoot: {exc}",
             ) from exc
-        except requests.exceptions.SSLError as exc:
+        except HttpTlsError as exc:
             raise ChatwootProxyError(
                 status_code=502,
                 detail=f"Error TLS/SSL con Chatwoot: {exc}",
             ) from exc
-        except requests.exceptions.RequestException as exc:
+        except HttpTransportError as exc:
             raise ChatwootProxyError(
                 status_code=502,
                 detail=f"Error de red consultando Chatwoot: {exc}",
@@ -210,7 +223,7 @@ class ChatwootFastApiProxyClient:
         return response
 
     @staticmethod
-    def _parse_json(response: requests.Response) -> Any:
+    def _parse_json(response: HttpResponse) -> Any:
         try:
             return response.json()
         except ValueError as exc:

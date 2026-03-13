@@ -64,3 +64,7 @@ Configuracion sugerida para ejecutar la interfaz FastAPI local:
 - `CHATWOOT_BASE_URL=https://chatwoot.tu-dominio.com`
 - `CHATWOOT_ACCOUNT_ID=<tu_account_id>`
 - `CHATWOOT_API_ACCESS_TOKEN=<tu_token>`
+
+## Documentacion adicional
+- Ver analisis de cobertura de API: [docs/api/chatwoot-fastapi-endpoint-gap.md](docs/api/chatwoot-fastapi-endpoint-gap.md)
+

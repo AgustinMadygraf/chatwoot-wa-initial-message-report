@@ -2,19 +2,32 @@ import math
 import time
 from collections.abc import Callable
 
-import requests
-from requests import Response
-
 from src.entities.chatwoot_connection_result import ChatwootConnectionResult
 from src.entities.chatwoot_contacts_result import ChatwootContactsResult, ContactRow
+from src.infrastructure.requests.http_transport import (
+    HttpConnectionError,
+    HttpResponse,
+    HttpTimeoutError,
+    HttpTlsError,
+    HttpTransportError,
+    HttpxSyncTransport,
+    SyncHttpTransport,
+)
 from src.infrastructure.settings.env_settings import ChatwootSettings
 from src.infrastructure.socket.network_checks import check_dns, check_tcp
 from src.infrastructure.urllib.url_utils import extract_host_port
 
+CONTACTS_PAGE_SIZE = 15
+
 
 class ChatwootRequestsGateway:
-    def __init__(self, settings: ChatwootSettings) -> None:
+    def __init__(
+        self,
+        settings: ChatwootSettings,
+        transport: SyncHttpTransport | None = None,
+    ) -> None:
         self._settings = settings
+        self._transport = transport or HttpxSyncTransport()
 
     def validate_connection(self) -> ChatwootConnectionResult:
         endpoint = self._build_endpoint("inboxes")
@@ -95,7 +108,7 @@ class ChatwootRequestsGateway:
     def fetch_contacts_raw_response(
         self,
         page: int = 1,
-    ) -> tuple[str, Response | None, str | None]:
+    ) -> tuple[str, HttpResponse | None, str | None]:
         endpoint = self._build_endpoint("contacts")
         response, _, error_detail = self._perform_get(endpoint, params={"page": page})
         return endpoint, response, error_detail
@@ -106,7 +119,7 @@ class ChatwootRequestsGateway:
         max_retries: int = 3,
         retry_delay_seconds: float = 1.0,
         on_retry: Callable[[int], None] | None = None,
-    ) -> tuple[str, Response | None, str | None]:
+    ) -> tuple[str, HttpResponse | None, str | None]:
         endpoint = self._build_endpoint("contacts")
         last_error: str | None = None
 
@@ -131,7 +144,7 @@ class ChatwootRequestsGateway:
         request_delay_seconds: float = 1.0,
         on_page_downloaded: Callable[[int, int], None] | None = None,
         on_retry: Callable[[int, int, int], None] | None = None,
-    ) -> tuple[str, list[dict], Response | None, str | None]:
+    ) -> tuple[str, list[dict], HttpResponse | None, str | None]:
         endpoint, first_response, first_error = self.fetch_contacts_raw_response_with_retries(
             page=1,
             max_retries=max_retries,
@@ -160,7 +173,7 @@ class ChatwootRequestsGateway:
         first_payload = self._parse_json_payload(first_response)
         contacts_all = self._extract_raw_contacts(first_payload)
         total_count, current_page = self._extract_pagination_meta(first_payload)
-        total_pages = max(1, math.ceil(total_count / 15))
+        total_pages = max(1, math.ceil(total_count / CONTACTS_PAGE_SIZE))
 
         if on_page_downloaded is not None:
             on_page_downloaded(1, total_pages)
@@ -172,7 +185,11 @@ class ChatwootRequestsGateway:
                 max_retries=max_retries,
                 retry_delay_seconds=request_delay_seconds,
                 on_retry=(
-                    (lambda attempt, current_page=page, total=total_pages: on_retry(current_page, total, attempt))
+                    (
+                        lambda attempt, current_page=page, total=total_pages: on_retry(
+                            current_page, total, attempt
+                        )
+                    )
                     if on_retry is not None
                     else None
                 ),
@@ -208,7 +225,7 @@ class ChatwootRequestsGateway:
         self,
         endpoint: str,
         params: dict[str, int] | None = None,
-    ) -> tuple[Response | None, str, str | None]:
+    ) -> tuple[HttpResponse | None, str, str | None]:
         host, port = extract_host_port(self._settings.base_url)
 
         if not host:
@@ -226,7 +243,7 @@ class ChatwootRequestsGateway:
         headers = {"api_access_token": self._settings.api_access_token}
 
         try:
-            response = requests.get(
+            response = self._transport.get(
                 endpoint,
                 headers=headers,
                 params=params,
@@ -234,7 +251,7 @@ class ChatwootRequestsGateway:
                 verify=self._settings.tls_verify,
             )
             return response, network_diag, None
-        except requests.exceptions.SSLError as exc:
+        except HttpTlsError as exc:
             return (
                 None,
                 network_diag,
@@ -245,7 +262,7 @@ class ChatwootRequestsGateway:
                     f"Detalle tecnico: {exc}. ({network_diag})"
                 ),
             )
-        except requests.exceptions.Timeout:
+        except HttpTimeoutError:
             return (
                 None,
                 network_diag,
@@ -254,7 +271,7 @@ class ChatwootRequestsGateway:
                     f"Revisa red, VPN/firewall y CHATWOOT_BASE_URL. ({network_diag})"
                 ),
             )
-        except requests.exceptions.ConnectionError as exc:
+        except HttpConnectionError as exc:
             return (
                 None,
                 network_diag,
@@ -263,11 +280,11 @@ class ChatwootRequestsGateway:
                     f"Detalle tecnico: {exc}. ({network_diag})"
                 ),
             )
-        except requests.RequestException as exc:
+        except HttpTransportError as exc:
             return None, network_diag, f"Error HTTP inesperado: {exc}"
 
     @staticmethod
-    def _extract_contacts(response: Response) -> tuple[list[ContactRow], str]:
+    def _extract_contacts(response: HttpResponse) -> tuple[list[ContactRow], str]:
         try:
             payload = response.json()
         except ValueError:
@@ -298,7 +315,7 @@ class ChatwootRequestsGateway:
         return contacts, f"Contactos parseados: {len(contacts)}."
 
     @staticmethod
-    def _parse_json_payload(response: Response) -> object:
+    def _parse_json_payload(response: HttpResponse) -> object:
         return response.json()
 
     @staticmethod
@@ -332,7 +349,7 @@ class ChatwootRequestsGateway:
     @staticmethod
     def _map_response(
         endpoint: str,
-        response: Response,
+        response: HttpResponse,
         network_diag: str,
     ) -> ChatwootConnectionResult:
         if response.status_code == 200:
