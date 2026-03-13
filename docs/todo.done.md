@@ -47,3 +47,19 @@
 - `python -m pytest -q` -> `14 passed`.
 - `docs/todo.md` vaciado (0 pendientes).
 
+## [2026-03-13] Ejecucion de `todo-workflow` sobre backlog de `code-audit` (ronda 2)
+
+### Dudas de alto nivel escaladas
+- [critica] Autenticacion/autorizacion de consumidores del proxy.
+  - Escalada a: `docs/decisions/preguntas-arquitectura.md`
+
+- [media] Politica de arranque ante fallos de bootstrap.
+  - Escalada a: `docs/decisions/preguntas-arquitectura.md`
+
+- [baja] Politica de informacion expuesta en `/health`.
+  - Escalada a: `docs/decisions/preguntas-arquitectura.md`
+
+### Resultado
+- `docs/todo.md` vaciado (0 pendientes).
+- Sin ejecucion de cambios de codigo (todo el backlog corresponde a decisiones arquitectonicas).
+
