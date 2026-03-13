@@ -3,6 +3,7 @@ Path: src/infrastructure/fastapi/app.py
 """
 
 from contextlib import asynccontextmanager
+import logging
 from typing import Any
 
 import httpx
@@ -21,6 +22,8 @@ from src.infrastructure.requests.chatwoot_fastapi_proxy_client import (
 from src.infrastructure.requests.http_transport import HttpxAsyncTransport
 from src.infrastructure.settings.env_settings import ChatwootSettings, load_chatwoot_settings
 from src.use_case.errors import ProxyGatewayError
+
+logger = logging.getLogger(__name__)
 
 _settings: ChatwootSettings | None = None
 _proxy_client: ChatwootFastApiProxyClient | None = None
@@ -42,6 +45,7 @@ async def lifespan(_app: FastAPI):
             transport=HttpxAsyncTransport(client=_async_http_client),
         )
     except Exception:
+        logger.exception("fastapi_lifespan_init_failed")
         _settings = None
         _proxy_client = None
         if _async_http_client is not None:

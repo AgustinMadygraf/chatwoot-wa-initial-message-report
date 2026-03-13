@@ -25,3 +25,25 @@
 - Accion: no se requieren ejecuciones tecnicas adicionales.
 - Estado final: backlog vacio.
 
+## [2026-03-13] Ejecucion de `todo-workflow` sobre hallazgos de `code-audit`
+
+### Certezas ejecutadas automaticamente
+- [alta] Sanitizacion de errores upstream hacia cliente.
+  - Cambio aplicado: `src/infrastructure/requests/chatwoot_fastapi_proxy_client.py`
+  - Resultado: se elimina propagacion de `response.text` al cliente y se usa mensaje generico.
+
+- [media] Observabilidad de fallo de startup.
+  - Cambio aplicado: `src/infrastructure/fastapi/app.py`
+  - Resultado: se agrega `logger.exception("fastapi_lifespan_init_failed")` en bootstrap.
+
+### Dudas de alto nivel escaladas
+- [critica] Autenticacion/autorizacion de consumidores del proxy.
+  - Escalada a: `docs/decisions/preguntas-arquitectura.md`
+
+- [baja] Politica de informacion expuesta en `/health`.
+  - Escalada a: `docs/decisions/preguntas-arquitectura.md`
+
+### Validacion
+- `python -m pytest -q` -> `14 passed`.
+- `docs/todo.md` vaciado (0 pendientes).
+

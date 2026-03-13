@@ -216,9 +216,15 @@ class ChatwootFastApiProxyClient:
             ) from exc
 
         if response.status_code >= 400:
+            logger.warning(
+                "chatwoot_upstream_error status_code=%s resource=%s account_id=%s",
+                response.status_code,
+                resource,
+                account_id,
+            )
             raise ChatwootProxyError(
                 status_code=response.status_code,
-                detail=response.text[:300],
+                detail="Chatwoot respondio con error.",
             )
         return response
 
@@ -231,6 +237,6 @@ class ChatwootFastApiProxyClient:
                 status_code=502,
                 detail=(
                     "Chatwoot devolvio una respuesta no-JSON. "
-                    f"status={response.status_code}, body_parcial={response.text[:180]}"
+                    f"status={response.status_code}"
                 ),
             ) from exc
