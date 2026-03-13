@@ -77,6 +77,7 @@ def _settings() -> ChatwootSettings:
         base_url="https://chatwoot.example.com",
         account_id=7,
         api_access_token="token-123",
+        proxy_api_key="proxy-secret",
         timeout_seconds=9.0,
         tls_verify=True,
     )

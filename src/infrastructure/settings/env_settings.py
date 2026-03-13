@@ -16,6 +16,7 @@ class ChatwootSettings:
     base_url: str
     account_id: int
     api_access_token: str
+    proxy_api_key: str
     timeout_seconds: float = 8.0
     tls_verify: Union[bool, str] = True
 
@@ -27,6 +28,7 @@ def load_chatwoot_settings() -> ChatwootSettings:
     base_url = _require_env("CHATWOOT_BASE_URL").rstrip("/")
     account_id_raw = _require_env("CHATWOOT_ACCOUNT_ID")
     api_access_token = _require_env("CHATWOOT_API_ACCESS_TOKEN")
+    proxy_api_key = _require_env("PROXY_API_KEY")
     timeout_seconds = 8.0
     tls_verify = _load_tls_verify()
 
@@ -39,6 +41,7 @@ def load_chatwoot_settings() -> ChatwootSettings:
         base_url=base_url,
         account_id=account_id,
         api_access_token=api_access_token,
+        proxy_api_key=proxy_api_key,
         timeout_seconds=timeout_seconds,
         tls_verify=tls_verify,
     )

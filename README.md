@@ -20,6 +20,7 @@ Variables requeridas:
 - `CHATWOOT_BASE_URL` (ej: `https://chatwoot.tu-dominio.com`)
 - `CHATWOOT_ACCOUNT_ID` (entero)
 - `CHATWOOT_API_ACCESS_TOKEN`
+- `PROXY_API_KEY`
 
 Valores hardcodeados en codigo:
 - `CHATWOOT_TIMEOUT_SECONDS=8`
@@ -53,6 +54,10 @@ Endpoints expuestos:
 - `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/contacts?page=all`
 - `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/contacts/{CONTACT_ID}`
 
+Autenticacion del proxy:
+- Header requerido: `X-Proxy-Api-Key: <PROXY_API_KEY>`
+- Sin header valido: respuesta `401 Unauthorized`
+
 Nota: los datos devueltos son los de Chatwoot (upstream). Si los campos
 `es_contacto_calificado`, `es_cliente`, `xubio_customer_id`, etc. existen en
 `custom_attributes`, se devuelven tal cual.
@@ -64,7 +69,7 @@ Configuracion sugerida para ejecutar la interfaz FastAPI local:
 - `CHATWOOT_BASE_URL=https://chatwoot.tu-dominio.com`
 - `CHATWOOT_ACCOUNT_ID=<tu_account_id>`
 - `CHATWOOT_API_ACCESS_TOKEN=<tu_token>`
+- `PROXY_API_KEY=<tu_clave_proxy>`
 
 ## Documentacion adicional
 - Ver analisis de cobertura de API: [docs/api/chatwoot-fastapi-endpoint-gap.md](docs/api/chatwoot-fastapi-endpoint-gap.md)
-

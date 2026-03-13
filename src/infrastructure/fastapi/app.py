@@ -3,11 +3,12 @@ Path: src/infrastructure/fastapi/app.py
 """
 
 from contextlib import asynccontextmanager
+import hmac
 import logging
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi.responses import HTMLResponse
 
 from src.interface_adapter.controllers.fastapi_proxy_controllers import (
@@ -69,7 +70,7 @@ def _require_proxy_client() -> ChatwootFastApiProxyClient:
             status_code=500,
             detail=(
                 "Configuracion Chatwoot invalida. Verifica .env: "
-                "CHATWOOT_BASE_URL, CHATWOOT_ACCOUNT_ID, CHATWOOT_API_ACCESS_TOKEN."
+                "CHATWOOT_BASE_URL, CHATWOOT_ACCOUNT_ID, CHATWOOT_API_ACCESS_TOKEN, PROXY_API_KEY."
             ),
         )
     return _proxy_client
@@ -77,6 +78,24 @@ def _require_proxy_client() -> ChatwootFastApiProxyClient:
 
 def _raise_http_error(error: ProxyGatewayError) -> None:
     raise HTTPException(status_code=error.status_code, detail=error.detail) from error
+
+
+def _verify_proxy_api_key(
+    x_proxy_api_key: str | None = Header(default=None, alias="X-Proxy-Api-Key"),
+) -> None:
+    if _settings is None:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Configuracion Chatwoot invalida. Verifica .env: "
+                "CHATWOOT_BASE_URL, CHATWOOT_ACCOUNT_ID, CHATWOOT_API_ACCESS_TOKEN, PROXY_API_KEY."
+            ),
+        )
+
+    if x_proxy_api_key is None or not hmac.compare_digest(
+        x_proxy_api_key, _settings.proxy_api_key
+    ):
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 def _human_href(path: str) -> str:
@@ -97,7 +116,7 @@ def health() -> dict[str, str]:
             status_code=500,
             detail=(
                 "Configuracion Chatwoot invalida. Verifica .env: "
-                "CHATWOOT_BASE_URL, CHATWOOT_ACCOUNT_ID, CHATWOOT_API_ACCESS_TOKEN."
+                "CHATWOOT_BASE_URL, CHATWOOT_ACCOUNT_ID, CHATWOOT_API_ACCESS_TOKEN, PROXY_API_KEY."
             ),
         )
     return {
@@ -159,7 +178,10 @@ def favicon() -> Response:
     return Response(status_code=204)
 
 
-@app.get("/api/v1/accounts/{account_id}/inboxes")
+@app.get(
+    "/api/v1/accounts/{account_id}/inboxes",
+    dependencies=[Depends(_verify_proxy_api_key)],
+)
 async def get_inboxes(account_id: int) -> Any:
     client = _require_proxy_client()
     controller = GetInboxesController(client=client)
@@ -169,7 +191,10 @@ async def get_inboxes(account_id: int) -> Any:
         _raise_http_error(error)
 
 
-@app.get("/api/v1/accounts/{account_id}/inboxes/{inbox_id}")
+@app.get(
+    "/api/v1/accounts/{account_id}/inboxes/{inbox_id}",
+    dependencies=[Depends(_verify_proxy_api_key)],
+)
 async def get_inbox_by_id(account_id: int, inbox_id: int) -> dict[str, Any]:
     client = _require_proxy_client()
     controller = GetInboxByIdController(client=client)
@@ -179,7 +204,10 @@ async def get_inbox_by_id(account_id: int, inbox_id: int) -> dict[str, Any]:
         _raise_http_error(error)
 
 
-@app.get("/api/v1/accounts/{account_id}/contacts")
+@app.get(
+    "/api/v1/accounts/{account_id}/contacts",
+    dependencies=[Depends(_verify_proxy_api_key)],
+)
 async def get_contacts(
     account_id: int,
     page: str | None = Query(default=None),
@@ -192,7 +220,10 @@ async def get_contacts(
         _raise_http_error(error)
 
 
-@app.get("/api/v1/accounts/{account_id}/contacts/{id}")
+@app.get(
+    "/api/v1/accounts/{account_id}/contacts/{id}",
+    dependencies=[Depends(_verify_proxy_api_key)],
+)
 async def get_contact_by_id(account_id: int, id: int) -> dict[str, Any]:
     client = _require_proxy_client()
     controller = GetContactByIdController(client=client)

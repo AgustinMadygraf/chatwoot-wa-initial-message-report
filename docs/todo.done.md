@@ -79,3 +79,25 @@
 - `docs/todo.md` vaciado (0 pendientes).
 - Sin ejecucion de cambios de codigo.
 
+## [2026-03-13] Ejecucion de `todo-workflow` sobre ADR-001 (autenticacion proxy)
+
+### Certezas ejecutadas automaticamente
+- Se agrega `PROXY_API_KEY` a configuracion obligatoria.
+  - Cambios: `src/infrastructure/settings/env_settings.py`, `.env.example`
+
+- Se implementa autenticacion por header `X-Proxy-Api-Key` en endpoints proxy.
+  - Cambio: `src/infrastructure/fastapi/app.py`
+
+- Se agregan tests de autorizacion del proxy.
+  - Cambio: `tests/test_fastapi_proxy_auth.py`
+
+- Se actualiza documentacion de uso.
+  - Cambio: `README.md`
+
+### Validacion
+- `python -m pytest -q` -> `17 passed`.
+
+### Resultado
+- Implementacion ADR-001 completada.
+- `docs/todo.md` vaciado (0 pendientes).
+
