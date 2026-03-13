@@ -63,3 +63,19 @@
 - `docs/todo.md` vaciado (0 pendientes).
 - Sin ejecucion de cambios de codigo (todo el backlog corresponde a decisiones arquitectonicas).
 
+## [2026-03-13] Ejecucion de `todo-workflow` sobre backlog de `code-audit` (ronda 3)
+
+### Dudas de alto nivel detectadas (ya escaladas, sin duplicar)
+- [critica] Autenticacion/autorizacion de consumidores del proxy.
+  - Estado: ya registrada en `docs/decisions/preguntas-arquitectura.md`.
+
+- [media] Politica de arranque ante fallos de bootstrap.
+  - Estado: ya registrada en `docs/decisions/preguntas-arquitectura.md`.
+
+- [baja] Politica de informacion expuesta en `/health`.
+  - Estado: ya registrada en `docs/decisions/preguntas-arquitectura.md`.
+
+### Resultado
+- `docs/todo.md` vaciado (0 pendientes).
+- Sin ejecucion de cambios de codigo.
+
