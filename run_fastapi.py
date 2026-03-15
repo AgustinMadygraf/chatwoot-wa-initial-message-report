@@ -16,7 +16,7 @@ def _serve(host: str, port: int, reload_enabled: bool) -> int:
 
         show_server_info(host=host, port=port, reload_enabled=reload_enabled)
         uvicorn.run(
-            "src.infrastructure.fastapi.app:app",
+            "src.infrastructure.fastapi_app.app:app",
             host=host,
             port=port,
             reload=reload_enabled,

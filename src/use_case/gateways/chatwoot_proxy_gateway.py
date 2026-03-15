@@ -36,3 +36,11 @@ class ChatwootProxyGateway(Protocol):
         conversation_id: int,
     ) -> dict[str, Any]:
         ...
+
+    async def get_conversation_messages(
+        self,
+        account_id: int,
+        conversation_id: int,
+        page: str | None,
+    ) -> dict[str, Any]:
+        ...

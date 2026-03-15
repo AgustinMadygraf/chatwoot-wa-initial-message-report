@@ -210,6 +210,40 @@ class RequestsArchitectureTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["payload"]["identifier"], "ex...01")
         self.assertEqual(result["payload"]["meta"]["sender"]["email"], "se...om")
 
+    async def test_proxy_client_conversation_messages_masks_sensitive_fields(self) -> None:
+        response = _FakeResponse(
+            status_code=200,
+            payload={
+                "payload": [
+                    {
+                        "id": 999,
+                        "content": "Hola +5491166667777",
+                        "sender": {"email": "pii@example.com", "identifier": "abc-123"},
+                    }
+                ],
+                "meta": {"sender_id": "123456789"},
+            },
+        )
+        transport = _RecordingAsyncTransport(response)
+        client = ChatwootFastApiProxyClient(settings=_settings(), transport=transport)
+
+        result = await client.get_conversation_messages(
+            account_id=7,
+            conversation_id=101,
+            page="1",
+        )
+
+        self.assertEqual(len(transport.calls), 1)
+        self.assertEqual(
+            transport.calls[0]["url"],
+            "https://chatwoot.example.com/api/v1/accounts/7/conversations/101/messages",
+        )
+        self.assertEqual(transport.calls[0]["params"], {"page": 1})
+        self.assertEqual(result["payload"][0]["id"], 999)
+        self.assertEqual(result["payload"][0]["sender"]["email"], "pi...om")
+        self.assertEqual(result["payload"][0]["sender"]["identifier"], "ab...23")
+        self.assertEqual(result["meta"]["sender_id"], "12...89")
+
 
 if __name__ == "__main__":
     unittest.main()

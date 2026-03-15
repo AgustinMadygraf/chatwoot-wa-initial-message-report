@@ -2,7 +2,7 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from src.infrastructure.fastapi import app as app_module
+from src.infrastructure.fastapi_app import app as app_module
 from src.infrastructure.settings.env_settings import ChatwootSettings
 
 
@@ -35,6 +35,15 @@ class _DummyProxyClient:
     async def get_conversation_by_id(self, account_id: int, conversation_id: int):
         _ = (account_id, conversation_id)
         return {"payload": {"id": 100, "contact": {"email": "a@example.com"}}}
+
+    async def get_conversation_messages(
+        self,
+        account_id: int,
+        conversation_id: int,
+        page: str | None,
+    ):
+        _ = (account_id, conversation_id, page)
+        return {"payload": [{"id": 2001}], "meta": {"count": 1}}
 
 
 def _settings() -> ChatwootSettings:
@@ -112,6 +121,18 @@ class FastApiProxyAuthTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["payload"]["id"], 100)
+
+    def test_conversation_messages_endpoint_accepts_valid_api_key(self) -> None:
+        with TestClient(app_module.app) as client:
+            app_module._settings = _settings()
+            app_module._proxy_client = _DummyProxyClient()
+            response = client.get(
+                "/api/v1/accounts/7/conversations/100/messages?page=1",
+                headers={"X-Proxy-Api-Key": "proxy-secret"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["meta"]["count"], 1)
 
 
 if __name__ == "__main__":

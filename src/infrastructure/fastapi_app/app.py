@@ -1,5 +1,5 @@
 """
-Path: src/infrastructure/fastapi/app.py
+Path: src/infrastructure/fastapi_app/app.py
 """
 
 from contextlib import asynccontextmanager
@@ -8,11 +8,13 @@ import logging
 from typing import Any
 
 import httpx
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
+from fastapi import FastAPI, Header, HTTPException, Query, Response
+from fastapi.param_functions import Depends
 from fastapi.responses import HTMLResponse
 
 from src.interface_adapter.controllers.fastapi_proxy_controllers import (
     GetConversationByIdController,
+    GetConversationMessagesController,
     GetContactByIdController,
     GetContactsController,
     GetConversationsController,
@@ -270,6 +272,27 @@ async def get_conversation_by_id(account_id: int, conversation_id: int) -> dict[
         return await controller.run(
             account_id=account_id,
             conversation_id=conversation_id,
+        )
+    except ProxyGatewayError as error:
+        _raise_http_error(error)
+
+
+@app.get(
+    "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages",
+    dependencies=[Depends(_verify_proxy_api_key)],
+)
+async def get_conversation_messages(
+    account_id: int,
+    conversation_id: int,
+    page: str | None = Query(default=None),
+) -> dict[str, Any]:
+    client = _require_proxy_client()
+    controller = GetConversationMessagesController(client=client)
+    try:
+        return await controller.run(
+            account_id=account_id,
+            conversation_id=conversation_id,
+            page=page,
         )
     except ProxyGatewayError as error:
         _raise_http_error(error)

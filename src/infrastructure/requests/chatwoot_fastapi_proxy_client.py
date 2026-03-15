@@ -212,6 +212,48 @@ class ChatwootFastApiProxyClient:
 
         return {"payload": sanitize_conversation_payload(payload)}
 
+    async def get_conversation_messages(
+        self,
+        account_id: int,
+        conversation_id: int,
+        page: str | None,
+    ) -> dict[str, Any]:
+        if page is None:
+            page = "1"
+
+        try:
+            numeric_page = int(page)
+            if numeric_page < 1:
+                raise ValueError("page debe ser >= 1")
+        except ValueError as exc:
+            raise ChatwootProxyError(
+                status_code=422,
+                detail="Invalid page value. Use a number >= 1.",
+            ) from exc
+
+        response = await self._forward_get(
+            account_id=account_id,
+            resource=f"conversations/{conversation_id}/messages",
+            params={"page": numeric_page},
+        )
+        payload = self._parse_json(response)
+        if not isinstance(payload, dict):
+            raise ChatwootProxyError(
+                status_code=502,
+                detail="Formato inesperado de Chatwoot para mensajes de conversacion",
+            )
+
+        data = payload.get("payload")
+        if isinstance(data, list):
+            payload["payload"] = [sanitize_conversation_payload(item) for item in data]
+        else:
+            payload["payload"] = sanitize_conversation_payload(data)
+
+        if "meta" in payload:
+            payload["meta"] = sanitize_conversation_payload(payload.get("meta"))
+
+        return payload
+
     async def _get_contacts_all(self, account_id: int) -> dict[str, Any]:
         try:
             contacts = await fetch_all_contacts_paginated_async(

@@ -75,6 +75,24 @@ class GetConversationByIdController:
         )
 
 
+class GetConversationMessagesController:
+    def __init__(self, client: ChatwootProxyGateway) -> None:
+        self._client = client
+
+    async def run(
+        self,
+        account_id: int,
+        conversation_id: int,
+        page: str | None,
+    ) -> dict[str, Any]:
+        self._client.enforce_account_id(account_id)
+        return await self._client.get_conversation_messages(
+            account_id=account_id,
+            conversation_id=conversation_id,
+            page=page,
+        )
+
+
 __all__ = [
     "GetInboxesController",
     "GetInboxByIdController",
@@ -82,4 +100,5 @@ __all__ = [
     "GetContactByIdController",
     "GetConversationsController",
     "GetConversationByIdController",
+    "GetConversationMessagesController",
 ]
