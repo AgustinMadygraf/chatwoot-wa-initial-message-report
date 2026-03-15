@@ -20,3 +20,19 @@ class ChatwootProxyGateway(Protocol):
 
     async def get_contact_by_id(self, account_id: int, contact_id: int) -> dict[str, Any]:
         ...
+
+    async def get_conversations(
+        self,
+        account_id: int,
+        page: str | None,
+        status: str | None,
+        inbox_id: int | None,
+    ) -> dict[str, Any]:
+        ...
+
+    async def get_conversation_by_id(
+        self,
+        account_id: int,
+        conversation_id: int,
+    ) -> dict[str, Any]:
+        ...

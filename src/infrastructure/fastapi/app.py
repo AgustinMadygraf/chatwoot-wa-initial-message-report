@@ -12,8 +12,10 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi.responses import HTMLResponse
 
 from src.interface_adapter.controllers.fastapi_proxy_controllers import (
+    GetConversationByIdController,
     GetContactByIdController,
     GetContactsController,
+    GetConversationsController,
     GetInboxByIdController,
     GetInboxesController,
 )
@@ -103,8 +105,9 @@ def _human_href(path: str) -> str:
         path.replace("{account_id}", "1")
         .replace("{id}", "21")
         .replace("{inbox_id}", "2")
+        .replace("{conversation_id}", "321")
     )
-    if "contacts" in href and "{id}" not in path and "?" not in href:
+    if ("contacts" in href or "conversations" in href) and "{id}" not in path and "?" not in href:
         href = f"{href}?page=1"
     return href
 
@@ -229,5 +232,44 @@ async def get_contact_by_id(account_id: int, id: int) -> dict[str, Any]:
     controller = GetContactByIdController(client=client)
     try:
         return await controller.run(account_id=account_id, contact_id=id)
+    except ProxyGatewayError as error:
+        _raise_http_error(error)
+
+
+@app.get(
+    "/api/v1/accounts/{account_id}/conversations",
+    dependencies=[Depends(_verify_proxy_api_key)],
+)
+async def get_conversations(
+    account_id: int,
+    page: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    inbox_id: int | None = Query(default=None),
+) -> dict[str, Any]:
+    client = _require_proxy_client()
+    controller = GetConversationsController(client=client)
+    try:
+        return await controller.run(
+            account_id=account_id,
+            page=page,
+            status=status,
+            inbox_id=inbox_id,
+        )
+    except ProxyGatewayError as error:
+        _raise_http_error(error)
+
+
+@app.get(
+    "/api/v1/accounts/{account_id}/conversations/{conversation_id}",
+    dependencies=[Depends(_verify_proxy_api_key)],
+)
+async def get_conversation_by_id(account_id: int, conversation_id: int) -> dict[str, Any]:
+    client = _require_proxy_client()
+    controller = GetConversationByIdController(client=client)
+    try:
+        return await controller.run(
+            account_id=account_id,
+            conversation_id=conversation_id,
+        )
     except ProxyGatewayError as error:
         _raise_http_error(error)

@@ -15,7 +15,10 @@ from src.infrastructure.requests.http_transport import (
     HttpxAsyncTransport,
 )
 from src.infrastructure.requests.inboxes_payload_mapper import normalize_inboxes_payload
-from src.infrastructure.requests.sensitive_data_sanitizer import sanitize_payload
+from src.infrastructure.requests.sensitive_data_sanitizer import (
+    sanitize_conversation_payload,
+    sanitize_payload,
+)
 from src.infrastructure.settings.env_settings import ChatwootSettings
 from src.use_case.chatwoot_contacts_query import (
     fetch_all_contacts_paginated_async,
@@ -147,6 +150,67 @@ class ChatwootFastApiProxyClient:
         if found is None:
             raise ChatwootProxyError(status_code=404, detail="Contact not found")
         return {"payload": found.raw}
+
+    async def get_conversations(
+        self,
+        account_id: int,
+        page: str | None,
+        status: str | None,
+        inbox_id: int | None,
+    ) -> dict[str, Any]:
+        if page is None:
+            page = "1"
+
+        try:
+            numeric_page = int(page)
+            if numeric_page < 1:
+                raise ValueError("page debe ser >= 1")
+        except ValueError as exc:
+            raise ChatwootProxyError(
+                status_code=422,
+                detail="Invalid page value. Use a number >= 1.",
+            ) from exc
+
+        params: dict[str, Any] = {"page": numeric_page}
+        if status is not None and status.strip():
+            params["status"] = status.strip()
+        if inbox_id is not None:
+            params["inbox_id"] = inbox_id
+
+        response = await self._forward_get(
+            account_id=account_id,
+            resource="conversations",
+            params=params,
+        )
+        payload = self._parse_json(response)
+        if isinstance(payload, dict):
+            return payload
+        return {
+            "payload": payload if isinstance(payload, list) else [],
+            "meta": {
+                "count": len(payload) if isinstance(payload, list) else 0,
+                "current_page": numeric_page,
+                "account_id": account_id,
+            },
+        }
+
+    async def get_conversation_by_id(
+        self,
+        account_id: int,
+        conversation_id: int,
+    ) -> dict[str, Any]:
+        response = await self._forward_get(
+            account_id=account_id,
+            resource=f"conversations/{conversation_id}",
+        )
+        payload = self._parse_json(response)
+        if not isinstance(payload, dict):
+            raise ChatwootProxyError(
+                status_code=502,
+                detail="Formato inesperado de Chatwoot para detalle de conversacion",
+            )
+
+        return {"payload": sanitize_conversation_payload(payload)}
 
     async def _get_contacts_all(self, account_id: int) -> dict[str, Any]:
         try:

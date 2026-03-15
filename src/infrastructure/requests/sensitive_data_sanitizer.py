@@ -18,6 +18,14 @@ SENSITIVE_KEYS = {
     "smtp_login",
 }
 SENSITIVE_KEY_PARTS = ("password", "token", "secret", "api_key", "authorization")
+CONVERSATION_SENSITIVE_KEYS = {
+    "email",
+    "phone_number",
+    "identifier",
+    "source_id",
+    "sender_id",
+    "contact_inbox_source_id",
+}
 
 
 def sanitize_payload(value: Any, key: str | None = None) -> Any:
@@ -28,6 +36,23 @@ def sanitize_payload(value: Any, key: str | None = None) -> Any:
     if isinstance(value, str):
         normalized_key = key.lower() if isinstance(key, str) else ""
         if normalized_key in SENSITIVE_KEYS or any(part in normalized_key for part in SENSITIVE_KEY_PARTS):
+            return _mask_secret(value)
+        return _truncate_long_numeric_sequences(value)
+    return value
+
+
+def sanitize_conversation_payload(value: Any, key: str | None = None) -> Any:
+    if isinstance(value, dict):
+        return {k: sanitize_conversation_payload(v, key=k) for k, v in value.items()}
+    if isinstance(value, list):
+        return [sanitize_conversation_payload(item, key=key) for item in value]
+    if isinstance(value, str):
+        normalized_key = key.lower() if isinstance(key, str) else ""
+        is_sensitive_key = normalized_key in CONVERSATION_SENSITIVE_KEYS
+        is_sensitive_secret = normalized_key in SENSITIVE_KEYS or any(
+            part in normalized_key for part in SENSITIVE_KEY_PARTS
+        )
+        if is_sensitive_key or is_sensitive_secret:
             return _mask_secret(value)
         return _truncate_long_numeric_sequences(value)
     return value

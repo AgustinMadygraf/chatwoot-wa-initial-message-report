@@ -22,6 +22,20 @@ class _DummyProxyClient:
     async def get_contact_by_id(self, _account_id: int, _contact_id: int):
         return {"payload": {"id": 10}}
 
+    async def get_conversations(
+        self,
+        account_id: int,
+        page: str | None,
+        status: str | None,
+        inbox_id: int | None,
+    ):
+        _ = (account_id, page, status, inbox_id)
+        return {"payload": [{"id": 100}], "meta": {"count": 1}}
+
+    async def get_conversation_by_id(self, account_id: int, conversation_id: int):
+        _ = (account_id, conversation_id)
+        return {"payload": {"id": 100, "contact": {"email": "a@example.com"}}}
+
 
 def _settings() -> ChatwootSettings:
     return ChatwootSettings(
@@ -74,6 +88,30 @@ class FastApiProxyAuthTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [{"id": 1}])
+
+    def test_conversations_endpoint_accepts_valid_api_key(self) -> None:
+        with TestClient(app_module.app) as client:
+            app_module._settings = _settings()
+            app_module._proxy_client = _DummyProxyClient()
+            response = client.get(
+                "/api/v1/accounts/7/conversations?page=1&status=open",
+                headers={"X-Proxy-Api-Key": "proxy-secret"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["meta"]["count"], 1)
+
+    def test_conversation_by_id_endpoint_accepts_valid_api_key(self) -> None:
+        with TestClient(app_module.app) as client:
+            app_module._settings = _settings()
+            app_module._proxy_client = _DummyProxyClient()
+            response = client.get(
+                "/api/v1/accounts/7/conversations/100",
+                headers={"X-Proxy-Api-Key": "proxy-secret"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["payload"]["id"], 100)
 
 
 if __name__ == "__main__":

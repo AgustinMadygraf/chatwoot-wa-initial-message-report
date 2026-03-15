@@ -1,6 +1,6 @@
-# Chatwoot API vs FastAPI Local: Endpoint Gap Analysis
+﻿# Chatwoot API vs FastAPI Local: Endpoint Gap Analysis
 
-Fecha de analisis: 2026-03-13
+Fecha de analisis: 2026-03-15
 
 ## Objetivo
 
@@ -20,21 +20,23 @@ Implementados actualmente en la interfaz local:
 2. `GET /api/v1/accounts/{account_id}/inboxes/{inbox_id}`
 3. `GET /api/v1/accounts/{account_id}/contacts`
 4. `GET /api/v1/accounts/{account_id}/contacts/{id}`
+5. `GET /api/v1/accounts/{account_id}/conversations`
+6. `GET /api/v1/accounts/{account_id}/conversations/{conversation_id}`
 
 Notas de comportamiento local:
 
 - `GET /contacts` acepta `page=N` y extension local `page=all`.
+- `GET /conversations` acepta `page=N`, `status` e `inbox_id`.
+- `GET /conversations/{conversation_id}` aplica sanitizacion explicita de campos sensibles.
 - Se fuerza `account_id` contra `CHATWOOT_ACCOUNT_ID` configurado en `.env`.
 
 ## Endpoints pendientes (priorizados por impacto funcional)
 
-### 1) Criticos para el reporte de mensaje inicial de WhatsApp
+### 1) Critico para el reporte de mensaje inicial de WhatsApp
 
-- `GET /api/v1/accounts/{account_id}/conversations`
-- `GET /api/v1/accounts/{account_id}/conversations/{conversation_id}`
 - `GET /api/v1/accounts/{account_id}/conversations/{conversation_id}/messages`
 
-Sin esta familia no se puede recorrer conversaciones y validar de forma robusta cual fue el primer mensaje en cada hilo.
+Sin este endpoint no se puede identificar de forma robusta el primer mensaje de cada hilo.
 
 ### 2) Alta prioridad operativa
 
@@ -60,13 +62,13 @@ Familia `inboxes` de administracion:
 
 Endpoint mas importante a implementar primero:
 
-1. `GET /api/v1/accounts/{account_id}/conversations`
+1. `GET /api/v1/accounts/{account_id}/conversations/{conversation_id}/messages`
 
 Justificacion:
 
-- Es el punto de entrada para listar los hilos a analizar.
-- Desbloquea la implementacion posterior de detalle de conversacion y mensajes.
-- Maximiza valor para el objetivo principal del repositorio.
+- Es el endpoint que permite identificar de forma robusta el primer mensaje real por conversacion.
+- Habilita metricas clave para CEO virtual: tiempo de primera respuesta, tipo de primer contacto y calidad del hilo.
+- Completa la cadena minima para reporte WhatsApp: lista de conversaciones + detalle + mensajes.
 
 ## Fuentes oficiales consultadas
 

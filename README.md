@@ -59,10 +59,17 @@ Endpoints expuestos:
 - `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/contacts?page=N`
 - `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/contacts?page=all`
 - `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/contacts/{CONTACT_ID}`
+- `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/conversations?page=N&status=open&inbox_id=2`
+- `GET /api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/conversations/{CONVERSATION_ID}`
 
 Autenticacion del proxy:
 - Header requerido: `X-Proxy-Api-Key: <PROXY_API_KEY>`
 - Sin header valido: respuesta `401 Unauthorized`
+
+Sanitizacion explicita en detalle de conversacion:
+- El endpoint `GET /conversations/{CONVERSATION_ID}` enmascara campos sensibles como
+  `email`, `phone_number`, `identifier`, `source_id`, `sender_id`,
+  `contact_inbox_source_id` y secretos (`token`, `authorization`, `password`, etc.).
 
 Nota: los datos devueltos son los de Chatwoot (upstream). Si los campos
 `es_contacto_calificado`, `es_cliente`, `xubio_customer_id`, etc. existen en

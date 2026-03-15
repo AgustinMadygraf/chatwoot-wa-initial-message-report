@@ -43,9 +43,43 @@ class GetContactByIdController:
         return await self._client.get_contact_by_id(account_id=account_id, contact_id=contact_id)
 
 
+class GetConversationsController:
+    def __init__(self, client: ChatwootProxyGateway) -> None:
+        self._client = client
+
+    async def run(
+        self,
+        account_id: int,
+        page: str | None,
+        status: str | None,
+        inbox_id: int | None,
+    ) -> dict[str, Any]:
+        self._client.enforce_account_id(account_id)
+        return await self._client.get_conversations(
+            account_id=account_id,
+            page=page,
+            status=status,
+            inbox_id=inbox_id,
+        )
+
+
+class GetConversationByIdController:
+    def __init__(self, client: ChatwootProxyGateway) -> None:
+        self._client = client
+
+    async def run(self, account_id: int, conversation_id: int) -> dict[str, Any]:
+        self._client.enforce_account_id(account_id)
+        return await self._client.get_conversation_by_id(
+            account_id=account_id,
+            conversation_id=conversation_id,
+        )
+
+
 __all__ = [
     "GetInboxesController",
     "GetInboxByIdController",
     "GetContactsController",
     "GetContactByIdController",
+    "GetConversationsController",
+    "GetConversationByIdController",
 ]

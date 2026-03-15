@@ -5,7 +5,10 @@ from src.infrastructure.requests.chatwoot_fastapi_proxy_client import (
     ChatwootFastApiProxyClient,
 )
 from src.infrastructure.requests.chatwoot_requests_gateway import ChatwootRequestsGateway
-from src.infrastructure.requests.sensitive_data_sanitizer import sanitize_payload
+from src.infrastructure.requests.sensitive_data_sanitizer import (
+    sanitize_conversation_payload,
+    sanitize_payload,
+)
 from src.infrastructure.settings.env_settings import ChatwootSettings
 
 
@@ -95,6 +98,27 @@ class RequestsArchitectureTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(sanitized["API_KEY"], "ab...34")
         self.assertEqual(sanitized["nested"]["Authorization"], "Be...en")
 
+    def test_sanitize_conversation_payload_masks_contact_sensitive_fields(self) -> None:
+        payload = {
+            "id": 123,
+            "identifier": "contact-identifier-abc",
+            "meta": {
+                "sender": {
+                    "email": "ceo@example.com",
+                    "phone_number": "+5491166667777",
+                }
+            },
+            "additional_attributes": {"access_token": "token-secret-123"},
+        }
+
+        sanitized = sanitize_conversation_payload(payload)
+
+        self.assertEqual(sanitized["id"], 123)
+        self.assertEqual(sanitized["identifier"], "co...bc")
+        self.assertEqual(sanitized["meta"]["sender"]["email"], "ce...om")
+        self.assertEqual(sanitized["meta"]["sender"]["phone_number"], "+5...77")
+        self.assertEqual(sanitized["additional_attributes"]["access_token"], "to...23")
+
     async def test_proxy_client_uses_injected_transport(self) -> None:
         response = _FakeResponse(
             status_code=200,
@@ -133,6 +157,58 @@ class RequestsArchitectureTest(unittest.IsolatedAsyncioTestCase):
             transport.calls[0]["url"],
             "https://chatwoot.example.com/api/v1/accounts/7/inboxes",
         )
+
+    async def test_proxy_client_conversations_uses_injected_transport(self) -> None:
+        response = _FakeResponse(
+            status_code=200,
+            payload={"payload": [{"id": 101}], "meta": {"count": 1, "current_page": 1}},
+        )
+        transport = _RecordingAsyncTransport(response)
+        client = ChatwootFastApiProxyClient(settings=_settings(), transport=transport)
+
+        result = await client.get_conversations(
+            account_id=7,
+            page="1",
+            status="open",
+            inbox_id=2,
+        )
+
+        self.assertEqual(result["meta"]["count"], 1)
+        self.assertEqual(len(transport.calls), 1)
+        self.assertEqual(
+            transport.calls[0]["url"],
+            "https://chatwoot.example.com/api/v1/accounts/7/conversations",
+        )
+        self.assertEqual(
+            transport.calls[0]["params"],
+            {"page": 1, "status": "open", "inbox_id": 2},
+        )
+
+    async def test_proxy_client_conversation_by_id_masks_sensitive_fields(self) -> None:
+        response = _FakeResponse(
+            status_code=200,
+            payload={
+                "id": 101,
+                "identifier": "external-ref-001",
+                "meta": {"sender": {"email": "secret@example.com"}},
+            },
+        )
+        transport = _RecordingAsyncTransport(response)
+        client = ChatwootFastApiProxyClient(settings=_settings(), transport=transport)
+
+        result = await client.get_conversation_by_id(
+            account_id=7,
+            conversation_id=101,
+        )
+
+        self.assertEqual(len(transport.calls), 1)
+        self.assertEqual(
+            transport.calls[0]["url"],
+            "https://chatwoot.example.com/api/v1/accounts/7/conversations/101",
+        )
+        self.assertEqual(result["payload"]["id"], 101)
+        self.assertEqual(result["payload"]["identifier"], "ex...01")
+        self.assertEqual(result["payload"]["meta"]["sender"]["email"], "se...om")
 
 
 if __name__ == "__main__":
