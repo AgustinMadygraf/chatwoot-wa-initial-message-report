@@ -5,6 +5,8 @@ Validador de conectividad a la API de Chatwoot con base de arquitectura limpia.
 ## Entrypoint
 - `python3 run.py`
 - `python3 run.py contacts`
+- `python3 run.py doctor`
+- `python3 run.py setup-security`
 
 ## Uso del comando contacts
 - `python3 run.py contacts` muestra tabla formateada (comportamiento por defecto).
@@ -21,6 +23,10 @@ Variables requeridas:
 - `CHATWOOT_ACCOUNT_ID` (entero)
 - `CHATWOOT_API_ACCESS_TOKEN`
 - `PROXY_API_KEY`
+
+Bootstrap rapido:
+- `python3 run.py setup-security` genera `PROXY_API_KEY` en `.env` y crea `certs/chatwoot-ca-bundle.pem`.
+- Alternativa script directo: `python3 scripts/bootstrap_security.py`.
 
 Valores hardcodeados en codigo:
 - `CHATWOOT_TIMEOUT_SECONDS=8`

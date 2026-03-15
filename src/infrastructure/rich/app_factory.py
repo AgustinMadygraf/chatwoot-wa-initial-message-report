@@ -13,4 +13,6 @@ def build_app() -> typer.Typer:
         run_contacts=runtime.run_contacts,
         show_about=runtime.show_about,
         show_examples=runtime.show_examples,
+        run_doctor=runtime.run_doctor,
+        run_setup_security=runtime.run_setup_security,
     )

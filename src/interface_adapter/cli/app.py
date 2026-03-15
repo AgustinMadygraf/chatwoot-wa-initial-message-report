@@ -9,6 +9,8 @@ def create_app(
     app_name: str = "chatwoot-connection-cli",
     show_about: Callable[[], None] | None = None,
     show_examples: Callable[[], None] | None = None,
+    run_doctor: Callable[[], int] | None = None,
+    run_setup_security: Callable[[str | None, bool], int] | None = None,
 ) -> typer.Typer:
     app = typer.Typer(
         add_completion=False,
@@ -18,7 +20,9 @@ def create_app(
             "Valida conectividad y autenticacion contra Chatwoot.\n\n"
             "Comandos clave:\n"
             "- [bold]check[/bold]: validacion rapida de conexion/token.\n"
-            "- [bold]contacts[/bold]: reporte de una pagina de contactos."
+            "- [bold]contacts[/bold]: reporte de una pagina de contactos.\n"
+            "- [bold]doctor[/bold]: diagnostico de configuracion local.\n"
+            "- [bold]setup-security[/bold]: genera PROXY_API_KEY y CA bundle."
         ),
     )
 
@@ -95,5 +99,32 @@ def create_app(
         typer.echo("Alias compatible: python3 run.py contact")
         typer.echo("Ejecucion por defecto: python3 run.py")
         typer.echo("Ayuda: python3 run.py --help")
+
+    @app.command("doctor")
+    def doctor() -> None:
+        """Diagnostica variables requeridas y artefactos locales."""
+        if run_doctor is None:
+            typer.echo("Comando no disponible en esta build.", err=True)
+            raise typer.Exit(code=1)
+        raise typer.Exit(code=run_doctor())
+
+    @app.command("setup-security")
+    def setup_security(
+        base_url: str | None = typer.Option(
+            None,
+            "--base-url",
+            help="Base URL HTTPS de Chatwoot para intentar anexar su certificado.",
+        ),
+        force_ca: bool = typer.Option(
+            False,
+            "--force-ca",
+            help="Reescribe certs/chatwoot-ca-bundle.pem desde certifi antes de anexar.",
+        ),
+    ) -> None:
+        """Genera PROXY_API_KEY en .env y crea certs/chatwoot-ca-bundle.pem."""
+        if run_setup_security is None:
+            typer.echo("Comando no disponible en esta build.", err=True)
+            raise typer.Exit(code=1)
+        raise typer.Exit(code=run_setup_security(base_url, force_ca))
 
     return app
